@@ -3,16 +3,23 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <locale.h>
+
 #include "ASCII_ART.h"
 #include "STRUCTS.h"
 
 void draw_border();
 void welcome_screen();
 void generate_map();
-void print_level();
+void print_level(int level_num);
+void print_room(int level_num, int room_num);
+
+Level level[4];
 
 int main()
 {
+    setlocale(LC_ALL, "");
+
     initscr();
     curs_set(FALSE);
     keypad(stdscr, TRUE);
@@ -21,6 +28,14 @@ int main()
     draw_border();
     welcome_screen();
     generate_map();
+
+    for (int i = 0; i < 4; i++)
+    {
+        draw_border();
+        print_level(i);
+        getch();
+        clear();
+    }
 
     endwin();
     clear();
@@ -69,8 +84,6 @@ void welcome_screen()
 
 void generate_map()
 {
-    Level level[4];
-
     for (int i = 0; i < 4; i++)
     {
         level[i].room_num = (rand() % (MAX_ROOM_NUM - 6 + 1)) + 6;
@@ -83,8 +96,8 @@ void generate_map()
             {
                 int found = 1;
 
-                temp_corner.y = rand() % (LINES - 2) + 1;
-                temp_corner.x = rand() % (COLS - 2) + 1;
+                temp_corner.y = rand() % (LINES - 2) + 2;
+                temp_corner.x = rand() % (COLS - 2) + 2;
 
                 temp_length = rand() % (MAX_ROOM_LENGTH - 6 + 1) + 6;
                 temp_width = rand() % (MAX_ROOM_LENGTH - 6 + 1) + 6;
@@ -106,7 +119,7 @@ void generate_map()
                     }
                 }
 
-                if (found == 1)
+                if (found == 1 && temp_corner.y + temp_width < LINES - 2 && temp_corner.x + temp_length < COLS - 2)
                     break;
             }
 
@@ -115,4 +128,38 @@ void generate_map()
             level[i].room[j].width = temp_width;
         }
     }
+}
+
+void print_level(int level_num)
+{
+    for (int i = 0; i < level[level_num].room_num; i++)
+        print_room(level_num, i);
+}
+
+void print_room(int level_num, int room_num)
+{
+    int x = level[level_num].room[room_num].upper_left_corner.x;
+    int y = level[level_num].room[room_num].upper_left_corner.y;
+    int length = level[level_num].room[room_num].length;
+    int width = level[level_num].room[room_num].width;
+
+    for (int i = 0; i < length; i++)
+    {
+        mvprintw(y, x + i, "_");
+        for (int j = 1; j < width + 1; j++)
+        {
+            // int inside_ascii = 183;
+            mvprintw(y + j, x + i, ".");
+        }
+        // int floor_ascii = 175;
+        mvprintw(y + width + 1, x + i, "_");
+    }
+
+    for (int i = 0; i < width + 1; i++)
+    {
+        mvprintw(y + i + 1, x - 1, "|");
+        mvprintw(y + i + 1, x + length, "|");
+    }
+
+    refresh();
 }
