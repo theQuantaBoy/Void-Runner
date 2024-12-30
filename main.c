@@ -5,6 +5,7 @@
 
 #include "ASCII_ART.h"
 
+void draw_border();
 void welcome_screen();
 
 int main()
@@ -14,13 +15,30 @@ int main()
     keypad(stdscr, TRUE);
     noecho();
 
+    draw_border();
     welcome_screen();
 
-    getch();
     endwin();
     clear();
 
     return 0;
+}
+
+void draw_border()
+{
+    for (int i = 0; i < COLS; i++)
+    {
+        mvprintw(0, i, "#");
+        mvprintw(LINES - 1, i, "#");
+    }
+
+    for (int i = 0; i < LINES; i++)
+    {
+        mvprintw(i, 0, "#");
+        mvprintw(i, COLS - 1, "#");
+    }
+
+    refresh();
 }
 
 void welcome_screen()
@@ -30,14 +48,17 @@ void welcome_screen()
     for (int i = 0; i < 23; i++)
     {
         move((LINES / 2) - 17 + i, (COLS / 2) - 48);
-        printw("%s\n", game_title[i]);
+        printw("%s", game_title[i]);
         refresh();
         usleep(30000);
     }
 
-    usleep(500000);
+    usleep(700000);
 
     move((LINES / 2) + 8, ((COLS - strlen(game_start)) / 2) - 1);
-    printw("%s\n", game_start);
+    printw("%s", game_start);
     refresh();
+
+    getch();
+    clear();
 }
