@@ -47,7 +47,7 @@ void welcome_screen()
 
     for (int i = 0; i < 23; i++)
     {
-        move((LINES / 2) - 17 + i, (COLS / 2) - 48);
+        move((LINES / 2) - 15 + i, (COLS / 2) - 47);
         printw("%s", game_title[i]);
         refresh();
         usleep(30000);
@@ -55,7 +55,7 @@ void welcome_screen()
 
     usleep(700000);
 
-    move((LINES / 2) + 8, ((COLS - strlen(game_start)) / 2) - 1);
+    move((LINES / 2) + 15, ((COLS - strlen(game_start)) / 2) - 1);
     printw("%s", game_start);
     refresh();
 
