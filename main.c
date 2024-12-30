@@ -47,8 +47,8 @@ void welcome_screen()
 
     for (int i = 0; i < 23; i++)
     {
-        move((LINES / 2) - 15 + i, (COLS / 2) - 47);
-        printw("%s", game_title[i]);
+        move((LINES / 2) - 15 + i, (COLS / 2) - 49);
+        printw("%s", game_title_design_2[i]);
         refresh();
         usleep(30000);
     }
