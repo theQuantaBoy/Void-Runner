@@ -148,14 +148,12 @@ void print_room(int level_num, int room_num)
         mvprintw(y, x + i, "_");
         for (int j = 1; j < width + 1; j++)
         {
-            // int inside_ascii = 183;
-            mvprintw(y + j, x + i, ".");
+            mvprintw(y + j, x + i, "·"); // Middle dot - ASCII Number: 183
         }
-        // int floor_ascii = 175;
-        mvprintw(y + width + 1, x + i, "_");
+        mvprintw(y + width + 1, x + i, "‾"); // overline - UTF-16 Encoding: 0x203E
     }
 
-    for (int i = 0; i < width + 1; i++)
+    for (int i = 0; i < width; i++)
     {
         mvprintw(y + i + 1, x - 1, "|");
         mvprintw(y + i + 1, x + length, "|");

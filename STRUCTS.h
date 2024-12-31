@@ -2,8 +2,8 @@
 #define MY_STRUCTS_H
 
 #define MAX_ROOM_NUM 8
-#define MAX_ROOM_LENGTH 40
-#define MIN_DISTANCE 4
+#define MAX_ROOM_LENGTH 60
+#define MIN_DISTANCE 10
 
 typedef struct
 {
