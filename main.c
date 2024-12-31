@@ -35,7 +35,6 @@ int main()
         draw_border();
         print_level(i);
         getch();
-        clear();
     }
 
     endwin();
@@ -122,10 +121,10 @@ void generate_map()
                     }
                 }
 
-                if (found == 1 && temp_corner.y + temp_width < LINES - MARGIN && temp_corner.x + temp_length < COLS - MARGIN)
+                if (found == 1 && temp_corner.y + temp_width < LINES - MARGIN && temp_corner.x + temp_length < COLS - MARGIN &&
+                    temp_corner.y > MARGIN + 1 && temp_corner.x > MARGIN + 1)
                 {
-                    if (temp_corner.y > MARGIN + 1 && temp_corner.x > MARGIN + 1)
-                        break;
+                    break;
                 }
             }
 
@@ -138,6 +137,9 @@ void generate_map()
 
 void print_level(int level_num)
 {
+    clear();
+    draw_border();
+
     for (int i = 0; i < level[level_num].room_num; i++)
         print_room(level_num, i);
 }
