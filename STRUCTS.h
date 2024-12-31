@@ -3,7 +3,11 @@
 
 #define MAX_ROOM_NUM 8
 #define MAX_ROOM_LENGTH 60
+#define MIN_ROOM_LENGTH 20
 #define MIN_DISTANCE 10
+#define MARGIN 5
+#define MAX_ROOM_RATIO 1.6
+#define MIN_ROOM_RATIO 0.6
 
 typedef struct
 {
