@@ -63,13 +63,14 @@ void draw_border()
 void welcome_screen()
 {
     char game_start[] = "- Press any key to continue -";
+    int sleep_time = 30000;
 
     for (int i = 0; i < 23; i++)
     {
         move((LINES / 2) - 15 + i, (COLS / 2) - 51);
         printw("%s", game_title_design_3[i]);
         refresh();
-        usleep(30000);
+        usleep(sleep_time);
     }
 
     usleep(700000);
