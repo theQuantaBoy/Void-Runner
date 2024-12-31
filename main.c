@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <time.h>
 #include <locale.h>
 
 #include "ASCII_ART.h"
@@ -19,6 +19,7 @@ Level level[4];
 int main()
 {
     setlocale(LC_ALL, "");
+    srand(time(0));
 
     initscr();
     curs_set(FALSE);
@@ -79,7 +80,7 @@ void welcome_screen()
     refresh();
 
     getch();
-    clear();
+    refresh();
 }
 
 void generate_map()
@@ -90,6 +91,7 @@ void generate_map()
         for (int j = 0; j < level[i].room_num; j++)
         {
             Point temp_corner;
+            float ratio;
             int temp_length, temp_width;
 
             while (1)
@@ -99,8 +101,9 @@ void generate_map()
                 temp_corner.y = rand() % (LINES - 2) + 2;
                 temp_corner.x = rand() % (COLS - 2) + 2;
 
-                temp_length = rand() % (MAX_ROOM_LENGTH - 6 + 1) + 6;
-                temp_width = rand() % (MAX_ROOM_LENGTH - 6 + 1) + 6;
+                ratio = ((float)rand() / RAND_MAX) * (MAX_ROOM_RATIO - MIN_ROOM_RATIO) + MAX_ROOM_RATIO;
+                temp_length = rand() % (MAX_ROOM_LENGTH - MIN_ROOM_LENGTH + 1) + MIN_ROOM_LENGTH;
+                temp_width = temp_length / ratio;
 
                 for (int k = 0; k < j; k++)
                 {
@@ -119,8 +122,11 @@ void generate_map()
                     }
                 }
 
-                if (found == 1 && temp_corner.y + temp_width < LINES - 2 && temp_corner.x + temp_length < COLS - 2)
-                    break;
+                if (found == 1 && temp_corner.y + temp_width < LINES - MARGIN && temp_corner.x + temp_length < COLS - MARGIN)
+                {
+                    if (temp_corner.y > MARGIN + 1 && temp_corner.x > MARGIN + 1)
+                        break;
+                }
             }
 
             level[i].room[j].upper_left_corner = temp_corner;
@@ -148,7 +154,7 @@ void print_room(int level_num, int room_num)
         mvprintw(y, x + i, "_");
         for (int j = 1; j < width + 1; j++)
         {
-            mvprintw(y + j, x + i, "·"); // Middle dot - ASCII Number: 183
+            mvprintw(y + j, x + i, "·"); // middle dot - ASCII Number: 183
         }
         mvprintw(y + width + 1, x + i, "‾"); // overline - UTF-16 Encoding: 0x203E
     }
