@@ -10,6 +10,7 @@
 #define MIN_ROOM_RATIO 0.6
 
 const char *welcome_options[4] = {"Continue Game", "Create New Account", "Play as Guest", "Quit"};
+const char *new_account_options[3] = {"Username: ", "Email: ", "Password: "};
 
 typedef struct
 {
