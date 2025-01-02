@@ -12,6 +12,7 @@ void draw_border();
 void title_screen();
 int welcome_screen();
 void draw_welcome_screen_border();
+void draw_new_account_screen();
 void generate_map();
 void print_level(int level_num);
 void print_room(int level_num, int room_num);
@@ -40,6 +41,9 @@ int main()
         print_level(i);
         getch();
     }
+
+    draw_new_account_screen();
+    getch();
 
     endwin();
     clear();
@@ -140,6 +144,74 @@ void generate_map()
     }
 }
 
+void draw_welcome_screen_border()
+{
+    clear();
+    draw_border();
+    mvprintw((LINES / 2) - 5, (COLS / 2) - 18, "__ Welcome _________________________");
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+    for (int i = 0; i < 9; i++)
+    {
+        mvprintw((LINES / 2) - 4 + i, (COLS / 2) - 18, "|");
+        mvprintw((LINES / 2) - 4 + i, (COLS / 2) + 17, "|");
+    }
+}
+
+int welcome_screen()
+{
+    int choice = 0;
+    while (1)
+    {
+        draw_welcome_screen_border();
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == choice)
+                attron(A_REVERSE);
+            mvprintw((LINES / 2) - 3 + (2 * i), (COLS / 2) - 9, "%s", welcome_options[i]);
+            if (i == choice)
+                attroff(A_REVERSE);
+        }
+
+        int key = getch();
+        if (key == KEY_DOWN)
+            choice = (choice + 1) % 4;
+        if (key == KEY_UP)
+            choice = (choice + 3) % 4;
+
+        if (key == 10 || key == 32) // 10: Enter , 32: Space
+            break;
+    }
+
+    return choice;
+}
+
+void draw_new_account_screen()
+{
+    clear();
+    draw_border();
+    mvprintw((LINES / 2) - 8, (COLS / 2) - 24, "__ New Account _________________________________");
+    mvprintw((LINES / 2) - 6, (COLS / 2) - 17, "Username: ");
+    mvprintw((LINES / 2) - 4, (COLS / 2) - 17, "Email: ");
+    mvprintw((LINES / 2) - 2, (COLS / 2) - 17, "Password: ");
+    mvprintw((LINES / 2), (COLS / 2) - 17, "[x] Show Password       Confirm");
+    mvprintw((LINES / 2) + 2, (COLS / 2) - 17, "Generate random password (Beta)");
+    mvprintw((LINES / 2) + 4, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+    for (int i = 0; i < 11; i++)
+    {
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) - 24, "|");
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) + 23, "|");
+    }
+}
+
+void new_account_screen()
+{
+    while (1)
+    {
+        draw_welcome_screen_border();
+    }
+}
+
 void print_level(int level_num)
 {
     clear();
@@ -173,46 +245,4 @@ void print_room(int level_num, int room_num)
     }
 
     refresh();
-}
-
-int welcome_screen()
-{
-    int choice = 0;
-    while (1)
-    {
-        draw_welcome_screen_border();
-
-        for (int i = 0; i < 4; i++)
-        {
-            if (i == choice)
-                attron(A_REVERSE);
-            mvprintw((LINES / 2) - 3 + (2 * i), (COLS / 2) - 9, "%s", welcome_options[i]);
-            if (i == choice)
-                attroff(A_REVERSE);
-        }
-
-        int key = getch();
-        if (key == KEY_DOWN)
-            choice = (choice + 1) % 4;
-        if (key == KEY_UP)
-            choice = (choice + 3) % 4;
-
-        if (key == 10 || key == 32) // 10: Enter , 32: Space
-            break;
-    }
-
-    return choice;
-}
-
-void draw_welcome_screen_border()
-{
-    clear();
-    draw_border();
-    mvprintw((LINES / 2) - 5, (COLS / 2) - 18, "__ Welcome _________________________");
-    mvprintw((LINES / 2) + 5, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
-    for (int i = 0; i < 9; i++)
-    {
-        mvprintw((LINES / 2) - 4 + i, (COLS / 2) - 18, "|");
-        mvprintw((LINES / 2) - 4 + i, (COLS / 2) + 17, "|");
-    }
 }
