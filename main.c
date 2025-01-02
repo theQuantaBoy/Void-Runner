@@ -9,7 +9,9 @@
 #include "STRUCTS.h"
 
 void draw_border();
-void welcome_screen();
+void title_screen();
+int welcome_screen();
+void draw_welcome_screen_border();
 void generate_map();
 void print_level(int level_num);
 void print_room(int level_num, int room_num);
@@ -27,8 +29,10 @@ int main()
     noecho();
 
     draw_border();
-    welcome_screen();
+    title_screen();
     generate_map();
+
+    int choice = welcome_screen();
 
     for (int i = 0; i < 4; i++)
     {
@@ -60,7 +64,7 @@ void draw_border()
     refresh();
 }
 
-void welcome_screen()
+void title_screen()
 {
     char game_start[] = "- Press any key to continue -";
     int sleep_time = 30000;
@@ -169,4 +173,46 @@ void print_room(int level_num, int room_num)
     }
 
     refresh();
+}
+
+int welcome_screen()
+{
+    int choice = 0;
+    while (1)
+    {
+        draw_welcome_screen_border();
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (i == choice)
+                attron(A_REVERSE);
+            mvprintw((LINES / 2) - 3 + (2 * i), (COLS / 2) - 8, "%s", welcome_options[i]);
+            if (i == choice)
+                attroff(A_REVERSE);
+        }
+
+        int key = getch();
+        if (key == KEY_DOWN)
+            choice = (choice + 1) % 3;
+        if (choice == KEY_UP)
+            choice = (choice + 2) % 3;
+
+        if (key == 10 || key == 32) // 10: Enter , 32: Space
+            break;
+    }
+
+    return choice;
+}
+
+void draw_welcome_screen_border()
+{
+    clear();
+    draw_border();
+    mvprintw((LINES / 2) - 5, (COLS / 2) - 18, "__ Welcome _________________________");
+    mvprintw((LINES / 2) + 3, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+    for (int i = 0; i < 7; i++)
+    {
+        mvprintw((LINES / 2) - 4 + i, (COLS / 2) - 18, "|");
+        mvprintw((LINES / 2) - 4 + i, (COLS / 2) + 17, "|");
+    }
 }
