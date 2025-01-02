@@ -182,20 +182,20 @@ int welcome_screen()
     {
         draw_welcome_screen_border();
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 4; i++)
         {
             if (i == choice)
                 attron(A_REVERSE);
-            mvprintw((LINES / 2) - 3 + (2 * i), (COLS / 2) - 8, "%s", welcome_options[i]);
+            mvprintw((LINES / 2) - 3 + (2 * i), (COLS / 2) - 9, "%s", welcome_options[i]);
             if (i == choice)
                 attroff(A_REVERSE);
         }
 
         int key = getch();
         if (key == KEY_DOWN)
-            choice = (choice + 1) % 3;
-        if (choice == KEY_UP)
-            choice = (choice + 2) % 3;
+            choice = (choice + 1) % 4;
+        if (key == KEY_UP)
+            choice = (choice + 3) % 4;
 
         if (key == 10 || key == 32) // 10: Enter , 32: Space
             break;
@@ -209,8 +209,8 @@ void draw_welcome_screen_border()
     clear();
     draw_border();
     mvprintw((LINES / 2) - 5, (COLS / 2) - 18, "__ Welcome _________________________");
-    mvprintw((LINES / 2) + 3, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
-    for (int i = 0; i < 7; i++)
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+    for (int i = 0; i < 9; i++)
     {
         mvprintw((LINES / 2) - 4 + i, (COLS / 2) - 18, "|");
         mvprintw((LINES / 2) - 4 + i, (COLS / 2) + 17, "|");

@@ -9,7 +9,7 @@
 #define MAX_ROOM_RATIO 1.6
 #define MIN_ROOM_RATIO 0.6
 
-const char *welcome_options[3] = {"Continue Game", "Create New Account", "Play as Guest"};
+const char *welcome_options[4] = {"Continue Game", "Create New Account", "Play as Guest", "Quit"};
 
 typedef struct
 {
