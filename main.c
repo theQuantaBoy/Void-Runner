@@ -38,12 +38,12 @@ int main()
 
     int choice = welcome_screen();
 
-    // for (int i = 0; i < 4; i++)
-    // {
-    //     draw_border();
-    //     print_level(i);
-    //     getch();
-    // }
+    for (int i = 0; i < 4; i++)
+    {
+        draw_border();
+        print_level(i);
+        getch();
+    }
 
     new_account_screen();
     // getch();
@@ -307,14 +307,30 @@ void new_account_screen()
             break;
         }
 
-        else if (key == KEY_DOWN)
-            choice = (choice + 1) % 6;
-
-        else if (key == KEY_UP)
-            choice = (choice + 5) % 6;
-
         else if (choice == 3 && (key == 10 || key == 32))
             show_password = !show_password;
+
+        else if (key == KEY_DOWN)
+        {
+            if (choice == 3 || choice == 4)
+                choice = 5;
+            else
+                choice = (choice + 1) % 6;
+        }
+
+        else if (key == KEY_UP)
+        {
+            if (choice == 5)
+                choice = 3;
+            else
+                choice = (choice + 5) % 6;
+        }
+
+        else if (choice == 3 || choice == 4 && (key == KEY_LEFT || key == KEY_RIGHT))
+            choice = (choice % 2) + 3;
+
+        else if ((choice == 0 || choice == 1 || choice == 2) && key == 10)
+            choice += 1;
     }
 }
 
