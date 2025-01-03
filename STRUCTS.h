@@ -48,9 +48,9 @@ typedef struct
 
 typedef struct
 {
-    char username[50];
-    char password[50];
-    char email[50];
+    char username[26];
+    char password[29];
+    char email[26];
     Map map;
 } User;
 
