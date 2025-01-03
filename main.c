@@ -5,6 +5,8 @@
 #include <time.h>
 #include <locale.h>
 #include <ctype.h>
+#include <stdbool.h>
+#include <regex.h>
 
 #include "ASCII_ART.h"
 #include "STRUCTS.h"
@@ -15,6 +17,17 @@ int welcome_screen();
 void draw_welcome_screen_border();
 void draw_new_account_screen();
 void new_account_screen();
+void save_user_data();
+bool username_unique();
+bool email_unique();
+bool email_valid();
+bool password_long_enough();
+bool password_valid();
+void print_user_taken();
+void print_email_taken();
+void print_wrong_email_format();
+void print_password_short();
+void print_wrong_password_format();
 void generate_map();
 void print_level(int level_num);
 void print_room(int level_num, int room_num);
@@ -38,12 +51,12 @@ int main()
 
     int choice = welcome_screen();
 
-    for (int i = 0; i < 4; i++)
-    {
-        draw_border();
-        print_level(i);
-        getch();
-    }
+    // for (int i = 0; i < 4; i++)
+    // {
+    //     draw_border();
+    //     print_level(i);
+    //     getch();
+    // }
 
     new_account_screen();
     // getch();
@@ -215,8 +228,7 @@ void new_account_screen()
     char password[26] = {};
 
     int show_password = 0;
-    int choice = 0;
-    int key;
+    int choice = 0, error = 0;
 
     while (1)
     {
@@ -288,7 +300,7 @@ void new_account_screen()
         {
             password[strlen(password)] = key;
         }
-        else if (key == KEY_BACKSPACE || key == 127) // Handle backspace
+        else if (key == KEY_BACKSPACE || key == 127)
         {
             if (choice == 0 && strlen(username) > 0)
                 username[strlen(username) - 1] = '\0';
@@ -298,11 +310,37 @@ void new_account_screen()
                 password[strlen(password) - 1] = '\0';
         }
 
-        if (choice == 4 && (key == 10 || key == 32))
+        // if (!username_unique(username))
+        //     error = 1;
+        if (!email_unique(email))
+            error = 2;
+        else if (!email_valid(email))
+            error = 3;
+        else if (!password_long_enough(password))
+            error = 4;
+        else if (!password_valid(password))
+            error = 5;
+        else
+            error = 0;
+
+        if (error == 1)
+            print_user_taken();
+        else if (error == 2)
+            print_email_taken();
+        else if (error == 3)
+            print_wrong_email_format();
+        else if (error == 4)
+            print_password_short();
+        else if (error == 5)
+            print_wrong_password_format();
+
+        if (error == 0 && choice == 4 && (key == 10 || key == 32))
         {
             strcpy(current_user.username, username);
             strcpy(current_user.email, email);
             strcpy(current_user.password, password);
+
+            save_user_data(username, email, password);
 
             break;
         }
@@ -332,6 +370,147 @@ void new_account_screen()
         else if ((choice == 0 || choice == 1 || choice == 2) && key == 10)
             choice += 1;
     }
+}
+
+void save_user_data(char username[26], char email[29], char password[26])
+{
+    FILE *users = fopen("users.csv", "a");
+    fprintf(users, "%s,%s,%s\n", username, email, password);
+    fclose(users);
+}
+
+bool username_unique(char username[26]) // Error 1
+{
+    FILE *users = fopen("users.csv", "r");
+    char file_line[83];
+    char file_username[26];
+    fgets(file_line, sizeof(file_line), users);
+
+    while (fgets(file_line, sizeof(file_line), users))
+    {
+        sscanf(file_line, "%255[^,]", file_username);
+        if (strcmp(file_username, username) == 0)
+        {
+            fclose(users);
+            return false;
+        }
+    }
+
+    fclose(users);
+    return true;
+}
+
+bool email_unique(char email[29]) // Error 2
+{
+    FILE *users = fopen("users.csv", "r");
+    char file_line[83];
+    char file_email[29];
+    fgets(file_line, sizeof(file_line), users);
+
+    while (fgets(file_line, sizeof(file_line), users))
+    {
+        char trash[26];
+        sscanf(file_line, "%[^,],%[^,],", trash, file_email);
+        if (strcmp(file_email, email) == 0)
+        {
+            fclose(users);
+            return false;
+        }
+    }
+
+    fclose(users);
+    return true;
+}
+
+bool email_valid(char email[29]) // Error 3
+{
+    regex_t regex;
+    int ret;
+
+    const char *pattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+
+    ret = regcomp(&regex, pattern, REG_EXTENDED);
+    ret = regexec(&regex, email, 0, NULL, 0);
+
+    regfree(&regex);
+
+    if (ret == 0)
+        return true;
+
+    else if (ret == REG_NOMATCH)
+        return false;
+}
+
+bool password_long_enough(char password[26]) // Error 4
+{
+    if (strlen(password) < 7)
+        return false;
+    return true;
+}
+
+bool password_valid(char password[26]) // Error 5
+{
+    int upper = 0, lower = 0, digit = 0;
+    for (int i = 0; i < strlen(password); i++)
+    {
+        if (password[i] >= 'A' && password[i] <= 'Z')
+            upper = 1;
+        else if (password[i] >= 'a' && password[i] <= 'z')
+            lower = 1;
+        else if (password[i] >= '0' && password[i] <= '9')
+            digit = 1;
+    }
+
+    if (upper && lower && digit)
+        return true;
+    return false;
+}
+
+void print_user_taken() // Error 1
+{
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "__ Error _______________________________________");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "|      Usernmae already taken. Try again!      |");
+    mvprintw((LINES / 2) + 8, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 9, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+void print_email_taken() // Error 2
+{
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "__ Error _______________________________________");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "|       Email already taken. Try again!        |");
+    mvprintw((LINES / 2) + 8, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 9, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+void print_wrong_email_format() // Error 3
+{
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "__ Error _______________________________________");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "|      Email format is wrong. Try again!       |");
+    mvprintw((LINES / 2) + 8, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 9, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+void print_password_short() // Error 4
+{
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "__ Error _______________________________________");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "|      Password is too short. Try again!       |");
+    mvprintw((LINES / 2) + 8, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 9, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+void print_wrong_password_format() // Error 5
+{
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "__ Error _______________________________________");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "|      Password must contain at least one      |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "|    lowercase letter, one uppercase letter,   |");
+    mvprintw((LINES / 2) + 9, (COLS / 2) - 24, "|           and one digit. Try again!          |");
+    mvprintw((LINES / 2) + 10, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 11, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
 }
 
 void print_level(int level_num)
