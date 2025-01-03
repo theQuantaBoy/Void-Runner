@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <locale.h>
+#include <ctype.h>
 
 #include "ASCII_ART.h"
 #include "STRUCTS.h"
@@ -13,11 +14,13 @@ void title_screen();
 int welcome_screen();
 void draw_welcome_screen_border();
 void draw_new_account_screen();
+void new_account_screen();
 void generate_map();
 void print_level(int level_num);
 void print_room(int level_num, int room_num);
 
 Level level[4];
+User current_user;
 
 int main()
 {
@@ -35,15 +38,15 @@ int main()
 
     int choice = welcome_screen();
 
-    for (int i = 0; i < 4; i++)
-    {
-        draw_border();
-        print_level(i);
-        getch();
-    }
+    // for (int i = 0; i < 4; i++)
+    // {
+    //     draw_border();
+    //     print_level(i);
+    //     getch();
+    // }
 
-    draw_new_account_screen();
-    getch();
+    new_account_screen();
+    // getch();
 
     endwin();
     clear();
@@ -186,7 +189,7 @@ int welcome_screen()
     return choice;
 }
 
-void draw_new_account_screen()
+void draw_new_account_screen(int show_password)
 {
     clear();
     draw_border();
@@ -194,7 +197,8 @@ void draw_new_account_screen()
     mvprintw((LINES / 2) - 6, (COLS / 2) - 17, "Username: ");
     mvprintw((LINES / 2) - 4, (COLS / 2) - 17, "Email: ");
     mvprintw((LINES / 2) - 2, (COLS / 2) - 17, "Password: ");
-    mvprintw((LINES / 2), (COLS / 2) - 17, "[x] Show Password       Confirm");
+    mvprintw((LINES / 2), (COLS / 2) - 17, "[%c] Show Password", show_password ? 'X' : ' ');
+    mvprintw((LINES / 2), (COLS / 2) + 7, "Confirm");
     mvprintw((LINES / 2) + 2, (COLS / 2) - 17, "Generate random password (Beta)");
     mvprintw((LINES / 2) + 4, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
     for (int i = 0; i < 11; i++)
@@ -206,9 +210,111 @@ void draw_new_account_screen()
 
 void new_account_screen()
 {
+    char username[26] = {};
+    char email[29] = {};
+    char password[26] = {};
+
+    int show_password = 0;
+    int choice = 0;
+    int key;
+
     while (1)
     {
-        draw_welcome_screen_border();
+        noecho();
+        draw_new_account_screen(show_password);
+
+        mvprintw((LINES / 2) - 6, (COLS / 2) - 7, "%s", username);
+        mvprintw((LINES / 2) - 4, (COLS / 2) - 10, "%s", email);
+
+        if (show_password == 0)
+        {
+            move((LINES / 2) - 2, (COLS / 2) - 7);
+            for (int i = 0; i < strlen(password); i++)
+                printw("*");
+        }
+        else
+        {
+            move((LINES / 2) - 2, (COLS / 2) - 7);
+            for (int i = 0; i < strlen(password); i++)
+                printw("%c", password[i]);
+        }
+
+        if (choice == 3)
+        {
+            attron(A_REVERSE);
+            mvprintw((LINES / 2), (COLS / 2) - 17, "[");
+            printw("%c", show_password ? 'X' : ' ');
+            printw("] Show Password");
+            attroff(A_REVERSE);
+        }
+        else if (choice == 4)
+        {
+            attron(A_REVERSE);
+            mvprintw((LINES / 2), (COLS / 2) + 7, "Confirm");
+            attroff(A_REVERSE);
+        }
+        else if (choice == 5)
+        {
+            attron(A_REVERSE);
+            mvprintw((LINES / 2) + 2, (COLS / 2) - 17, "Generate random password (Beta)");
+            attroff(A_REVERSE);
+        }
+
+        if (choice < 3)
+        {
+            echo();
+            curs_set(1);
+            if (choice == 0)
+                move((LINES / 2) - 6, (COLS / 2) - 7 + strlen(username));
+            else if (choice == 1)
+                move((LINES / 2) - 4, (COLS / 2) - 10 + strlen(email));
+            else if (choice == 2)
+                move((LINES / 2) - 2, (COLS / 2) - 7 + strlen(password));
+        }
+        else
+            curs_set(0);
+
+        int key = getch();
+
+        if (choice == 0 && strlen(username) < sizeof(username) - 1 && isprint(key))
+        {
+            username[strlen(username)] = key;
+        }
+        else if (choice == 1 && strlen(email) < sizeof(email) - 1 && isprint(key))
+        {
+            email[strlen(email)] = key;
+        }
+        else if (choice == 2 && strlen(password) < sizeof(password) - 1 && isprint(key))
+        {
+            password[strlen(password)] = key;
+        }
+        else if (key == KEY_BACKSPACE || key == 127) // Handle backspace
+        {
+            if (choice == 0 && strlen(username) > 0)
+                username[strlen(username) - 1] = '\0';
+            else if (choice == 1 && strlen(email) > 0)
+                email[strlen(email) - 1] = '\0';
+            else if (choice == 2 && strlen(password) > 0)
+                password[strlen(password) - 1] = '\0';
+        }
+
+        if (choice == 4 && (key == 10 || key == 32))
+        {
+            strcpy(current_user.username, username);
+            strcpy(current_user.email, email);
+            strcpy(current_user.password, password);
+
+            break;
+        }
+
+        else if (key == KEY_DOWN)
+            choice = (choice + 1) % 6;
+
+        else if (key == KEY_UP)
+            choice = (choice + 5) % 6;
+
+        else if (choice == 3 && (key == 10 || key == 32))
+            show_password = !show_password;
     }
 }
 
