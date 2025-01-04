@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "ascii_art.h": "c"
+        "ascii_art.h": "c",
+        "stdbool.h": "c"
     }
 }
