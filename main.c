@@ -235,6 +235,17 @@ void new_account_screen()
         noecho();
         draw_new_account_screen(show_password);
 
+        if (error == 1)
+            print_user_taken();
+        else if (error == 2)
+            print_email_taken();
+        else if (error == 3 && strlen(email) > 0)
+            print_wrong_email_format();
+        else if (error == 4)
+            print_password_short();
+        else if (error == 5)
+            print_wrong_password_format();
+
         mvprintw((LINES / 2) - 6, (COLS / 2) - 7, "%s", username);
         mvprintw((LINES / 2) - 4, (COLS / 2) - 10, "%s", email);
 
@@ -310,9 +321,9 @@ void new_account_screen()
                 password[strlen(password) - 1] = '\0';
         }
 
-        // if (!username_unique(username))
-        //     error = 1;
-        if (!email_unique(email))
+        if (!username_unique(username))
+            error = 1;
+        else if (!email_unique(email))
             error = 2;
         else if (!email_valid(email))
             error = 3;
@@ -322,17 +333,6 @@ void new_account_screen()
             error = 5;
         else
             error = 0;
-
-        if (error == 1)
-            print_user_taken();
-        else if (error == 2)
-            print_email_taken();
-        else if (error == 3)
-            print_wrong_email_format();
-        else if (error == 4)
-            print_password_short();
-        else if (error == 5)
-            print_wrong_password_format();
 
         if (error == 0 && choice == 4 && (key == 10 || key == 32))
         {
@@ -382,9 +382,25 @@ void save_user_data(char username[26], char email[29], char password[26])
 bool username_unique(char username[26]) // Error 1
 {
     FILE *users = fopen("users.csv", "r");
-    char file_line[83];
-    char file_username[26];
-    fgets(file_line, sizeof(file_line), users);
+
+    if (users == NULL)
+    {
+        perror("Error opening file");
+        return false;
+    }
+
+    char file_line[1024];
+    char file_username[256];
+
+    if (fgets(file_line, sizeof(file_line), users) != NULL)
+    {
+        sscanf(file_line, "%255[^,]", file_username);
+        if (strcmp(file_username, username) == 0)
+        {
+            fclose(users);
+            return false;
+        }
+    }
 
     while (fgets(file_line, sizeof(file_line), users))
     {
@@ -403,14 +419,31 @@ bool username_unique(char username[26]) // Error 1
 bool email_unique(char email[29]) // Error 2
 {
     FILE *users = fopen("users.csv", "r");
-    char file_line[83];
-    char file_email[29];
-    fgets(file_line, sizeof(file_line), users);
+
+    if (users == NULL)
+    {
+        perror("Error opening file");
+        return false;
+    }
+
+    char file_line[1024];
+    char file_email[256];
+
+    if (fgets(file_line, sizeof(file_line), users) != NULL)
+    {
+        sscanf(file_line, "%255[^,]", file_email);
+        mvprintw(5, 5, "%s\n", file_email);
+        if (strcmp(file_email, email) == 0)
+        {
+            fclose(users);
+            return false;
+        }
+    }
 
     while (fgets(file_line, sizeof(file_line), users))
     {
-        char trash[26];
-        sscanf(file_line, "%[^,],%[^,],", trash, file_email);
+        char trash[256];
+        sscanf(file_line, "%255[^,],%255[^,],", trash, file_email);
         if (strcmp(file_email, email) == 0)
         {
             fclose(users);
