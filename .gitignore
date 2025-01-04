@@ -2,5 +2,4 @@ test/
 main
 notes/
 users.csv
-.vscode/
-settings.json
+.vscode/settings.json
