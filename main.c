@@ -24,10 +24,10 @@ int main()
 
     int choice = welcome_screen();
 
-    if (choice == 1)
-        new_account_screen();
-    else if (choice == 0)
+    if (choice == 0)
         continue_game_screen();
+    else if (choice == 1)
+        new_account_screen();
 
     endwin();
     clear();
