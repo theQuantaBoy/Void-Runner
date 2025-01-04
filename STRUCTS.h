@@ -2,7 +2,7 @@
 #define MY_STRUCTS_H
 
 #define MAX_ROOM_NUM 8
-#define MAX_ROOM_LENGTH 60
+#define MIN_ROOM_WIDTH 10
 #define MIN_ROOM_LENGTH 10
 #define MIN_DISTANCE 10
 #define MARGIN 5
@@ -20,7 +20,7 @@ typedef struct
 
 typedef struct
 {
-    Point upper_left_corner;
+    Point corner;
     Point door;
 
     Point window[4];
@@ -35,7 +35,7 @@ typedef struct
 
 typedef struct
 {
-    Room room[MAX_ROOM_NUM];
+    Room room[6];
     int room_num;
 
     Point staircase;

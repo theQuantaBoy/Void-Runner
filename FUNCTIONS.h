@@ -1,11 +1,15 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
+#include "STRUCTS.h"
+
 void draw_border();
 
 void title_screen();
 
-void generate_map();
+void random_map();
+void random_level(int level_num);
+void random_room(int y_min, int y_max, int x_min, int x_max, Room *room);
 void print_level(int level_num);
 void print_room(int level_num, int room_num);
 

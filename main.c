@@ -29,6 +29,14 @@ int main()
     else if (choice == 1)
         new_account_screen();
 
+    random_map();
+
+    for (int i = 0; i < 4; i++)
+    {
+        print_level(i);
+        getchar();
+    }
+
     endwin();
     clear();
 

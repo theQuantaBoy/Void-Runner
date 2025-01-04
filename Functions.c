@@ -56,58 +56,6 @@ void title_screen()
 }
 
 // Randomly Generate the Map
-void generate_map()
-{
-    for (int i = 0; i < 4; i++)
-    {
-        level[i].room_num = (rand() % (MAX_ROOM_NUM - 6 + 1)) + 6;
-        for (int j = 0; j < level[i].room_num; j++)
-        {
-            Point temp_corner;
-            float ratio;
-            int temp_length, temp_width;
-
-            while (1)
-            {
-                int found = 1;
-
-                temp_corner.y = rand() % (LINES - 2) + 2;
-                temp_corner.x = rand() % (COLS - 2) + 2;
-
-                ratio = ((float)rand() / RAND_MAX) * (MAX_ROOM_RATIO - MIN_ROOM_RATIO) + MAX_ROOM_RATIO;
-                temp_length = rand() % (MAX_ROOM_LENGTH - MIN_ROOM_LENGTH + 1) + MIN_ROOM_LENGTH;
-                temp_width = temp_length / ratio;
-
-                for (int k = 0; k < j; k++)
-                {
-                    int x = level[i].room[k].upper_left_corner.x;
-                    int y = level[i].room[k].upper_left_corner.y;
-                    int length = level[i].room[k].length;
-                    int width = level[i].room[k].width;
-
-                    if (temp_corner.x + temp_length >= x - MIN_DISTANCE && temp_corner.x <= x + length + MIN_DISTANCE)
-                    {
-                        if (temp_corner.y + temp_width >= y - MIN_DISTANCE && temp_corner.y <= y + width + MIN_DISTANCE)
-                        {
-                            found = 0;
-                            break;
-                        }
-                    }
-                }
-
-                if (found == 1 && temp_corner.y + temp_width < LINES - MARGIN && temp_corner.x + temp_length < COLS - MARGIN &&
-                    temp_corner.y > MARGIN + 1 && temp_corner.x > MARGIN + 1)
-                {
-                    break;
-                }
-            }
-
-            level[i].room[j].upper_left_corner = temp_corner;
-            level[i].room[j].length = temp_length;
-            level[i].room[j].width = temp_width;
-        }
-    }
-}
 
 void print_level(int level_num)
 {
@@ -120,8 +68,8 @@ void print_level(int level_num)
 
 void print_room(int level_num, int room_num)
 {
-    int x = level[level_num].room[room_num].upper_left_corner.x;
-    int y = level[level_num].room[room_num].upper_left_corner.y;
+    int x = level[level_num].room[room_num].corner.x;
+    int y = level[level_num].room[room_num].corner.y;
     int length = level[level_num].room[room_num].length;
     int width = level[level_num].room[room_num].width;
 
@@ -867,4 +815,44 @@ void print_wrong_password() // Error 3
     mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "|          Wrong Password. Try again!          |");
     mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
     mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+// New Map Generation Algorithm
+void random_map()
+{
+    for (int i = 0; i < 4; i++)
+        random_level(i);
+}
+
+void random_room(int y_min, int y_max, int x_min, int x_max, Room *room)
+{
+    (*room).corner.y = (rand() % (y_max - y_min - 1)) + (y_min + 1);
+    (*room).corner.x = (rand() % (x_max - x_min - 1)) + (x_min + 1);
+    (*room).width = (rand() % (y_max - (*room).corner.y - MIN_ROOM_WIDTH)) + (MIN_ROOM_WIDTH);
+    (*room).length = (rand() % (x_max - (*room).corner.x - MIN_ROOM_LENGTH)) + (MIN_ROOM_LENGTH);
+}
+
+void random_level(int level_num)
+{
+    int y_values[3];
+    y_values[0] = 1;
+    y_values[1] = (rand() % ((2 * LINES) / 3)) + (2 * MIN_ROOM_WIDTH);
+    y_values[2] = LINES - 1;
+
+    int x_values[4];
+    x_values[0] = 1;
+    x_values[1] = (rand() % (COLS / 3)) + (2 * MIN_ROOM_LENGTH);
+    x_values[2] = (rand() % (COLS / 3)) + x_values[1] + (2 * MIN_ROOM_LENGTH);
+    x_values[3] = COLS - 1;
+
+    level[level_num].room_num = 0;
+
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            random_room(y_values[i], y_values[i + 1], x_values[j], x_values[j + 1], &level[level_num].room[level[level_num].room_num]);
+            level[level_num].room_num += 1;
+        }
+    }
 }
