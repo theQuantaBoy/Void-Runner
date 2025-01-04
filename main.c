@@ -31,6 +31,14 @@ void print_wrong_password_format();
 void generate_map();
 void print_level(int level_num);
 void print_room(int level_num, int room_num);
+void draw_sign_in_screen(int option, int show_password);
+void continue_game_screen();
+bool password_correct(int user_index, char password[26]);
+void print_user_not_found();
+void print_email_not_found();
+void print_wrong_password();
+int username_found(char username[26]);
+int email_found(char email[29]);
 
 Level level[4];
 User current_user;
@@ -47,19 +55,13 @@ int main()
 
     draw_border();
     title_screen();
-    generate_map();
 
     int choice = welcome_screen();
 
-    // for (int i = 0; i < 4; i++)
-    // {
-    //     draw_border();
-    //     print_level(i);
-    //     getch();
-    // }
-
-    new_account_screen();
-    // getch();
+    if (choice == 1)
+        new_account_screen();
+    else if (choice == 0)
+        continue_game_screen();
 
     endwin();
     clear();
@@ -325,11 +327,11 @@ void new_account_screen()
             error = 1;
         else if (!email_unique(email))
             error = 2;
-        else if (!email_valid(email))
+        else if (strlen(email) > 0 && !email_valid(email))
             error = 3;
-        else if (!password_long_enough(password))
+        else if (strlen(password) > 0 && !password_long_enough(password))
             error = 4;
-        else if (!password_valid(password))
+        else if (strlen(password) > 0 && !password_valid(password))
             error = 5;
         else
             error = 0;
@@ -540,10 +542,342 @@ void print_wrong_password_format() // Error 5
     mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "__ Error _______________________________________");
     mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
     mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "|      Password must contain at least one      |");
-    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "|    lowercase letter, one uppercase letter,   |");
+    mvprintw((LINES / 2) + 8, (COLS / 2) - 24, "|    lowercase letter, one uppercase letter,   |");
     mvprintw((LINES / 2) + 9, (COLS / 2) - 24, "|           and one digit. Try again!          |");
     mvprintw((LINES / 2) + 10, (COLS / 2) - 24, "|                                              |");
     mvprintw((LINES / 2) + 11, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+void draw_sign_in_screen(int option, int show_password)
+{
+    clear();
+    draw_border();
+
+    if (option == 0)
+    {
+        mvprintw((LINES / 2) - 8, (COLS / 2) - 24, "__ Continue Game _______________________________");
+        mvprintw((LINES / 2) - 6, (COLS / 2) - 17, "Username: ");
+        mvprintw((LINES / 2) - 4, (COLS / 2) - 17, "Password: ");
+        mvprintw((LINES / 2) - 2, (COLS / 2) - 17, "[%c] Show Password", show_password ? 'X' : ' ');
+        mvprintw((LINES / 2) - 2, (COLS / 2) + 7, "Sign In");
+        mvprintw((LINES / 2), (COLS / 2) - 10, "Continue with Email");
+        mvprintw((LINES / 2) + 2, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+
+        for (int i = 0; i < 9; i++)
+        {
+            mvprintw((LINES / 2) - 7 + i, (COLS / 2) - 24, "|");
+            mvprintw((LINES / 2) - 7 + i, (COLS / 2) + 23, "|");
+        }
+    }
+
+    else if (option == 1)
+    {
+        mvprintw((LINES / 2) - 8, (COLS / 2) - 24, "__ Continue Game _______________________________");
+        mvprintw((LINES / 2) - 6, (COLS / 2) - 17, "Email: ");
+        mvprintw((LINES / 2) - 4, (COLS / 2) - 17, "Password: ");
+        mvprintw((LINES / 2) - 2, (COLS / 2) - 17, "[%c] Show Password", show_password ? 'X' : ' ');
+        mvprintw((LINES / 2) - 2, (COLS / 2) + 7, "Sign In");
+        mvprintw((LINES / 2), (COLS / 2) - 11, "Continue with Username");
+        mvprintw((LINES / 2) + 2, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+
+        for (int i = 0; i < 9; i++)
+        {
+            mvprintw((LINES / 2) - 7 + i, (COLS / 2) - 24, "|");
+            mvprintw((LINES / 2) - 7 + i, (COLS / 2) + 23, "|");
+        }
+    }
+}
+
+void continue_game_screen()
+{
+    char username[26] = {};
+    char email[29] = {};
+    char password[26] = {};
+
+    int show_password = 0;
+    int choice = 0, error = 0, user_index = -2;
+    int option = 0; // 0: username - 1: email
+
+    while (1)
+    {
+        noecho();
+        draw_sign_in_screen(option, show_password);
+
+        if (option == 0 && user_index == -1)
+            error = 1;
+        else if (option == 1 && user_index == -1)
+            error = 2;
+        else if (strlen(password) > 0 && !password_correct(user_index, password))
+            error = 3;
+        else
+            error = 0;
+
+        if (error == 1)
+            print_user_not_found();
+        else if (error == 2)
+            print_email_not_found();
+        else if (error == 3 && strlen(password) > 0)
+            print_wrong_password();
+
+        if (option == 0)
+            mvprintw((LINES / 2) - 6, (COLS / 2) - 7, "%s", username);
+        else if (option == 1)
+            mvprintw((LINES / 2) - 6, (COLS / 2) - 10, "%s", email);
+
+        if (show_password == 0)
+        {
+            move((LINES / 2) - 4, (COLS / 2) - 7);
+            for (int i = 0; i < strlen(password); i++)
+                printw("*");
+        }
+        else
+        {
+            move((LINES / 2) - 4, (COLS / 2) - 7);
+            for (int i = 0; i < strlen(password); i++)
+                printw("%c", password[i]);
+        }
+
+        if (choice == 2)
+        {
+            attron(A_REVERSE);
+            mvprintw((LINES / 2) - 2, (COLS / 2) - 17, "[");
+            printw("%c", show_password ? 'X' : ' ');
+            printw("] Show Password");
+            attroff(A_REVERSE);
+        }
+        else if (choice == 3)
+        {
+            attron(A_REVERSE);
+            mvprintw((LINES / 2) - 2, (COLS / 2) + 7, "Sign In");
+            attroff(A_REVERSE);
+        }
+        else if (choice == 4)
+        {
+            if (option == 0)
+            {
+                attron(A_REVERSE);
+                mvprintw((LINES / 2), (COLS / 2) - 10, "Continue with Email");
+                attroff(A_REVERSE);
+            }
+
+            else if (option == 1)
+            {
+                attron(A_REVERSE);
+                mvprintw((LINES / 2), (COLS / 2) - 11, "Continue with Username");
+                attroff(A_REVERSE);
+            }
+        }
+
+        if (choice < 2)
+        {
+            echo();
+            curs_set(1);
+            if (choice == 0 && option == 0)
+                move((LINES / 2) - 6, (COLS / 2) - 7 + strlen(username));
+            else if (choice == 0 && option == 1)
+                move((LINES / 2) - 6, (COLS / 2) - 10 + strlen(email));
+            else if (choice == 1)
+                move((LINES / 2) - 4, (COLS / 2) - 7 + strlen(password));
+        }
+        else
+            curs_set(0);
+
+        int key = getch();
+
+        if (choice == 0 && option == 0 && strlen(username) < sizeof(username) - 1 && isprint(key))
+        {
+            username[strlen(username)] = key;
+        }
+        else if (choice == 0 && option == 1 && strlen(email) < sizeof(email) - 1 && isprint(key))
+        {
+            email[strlen(email)] = key;
+        }
+        else if (choice == 1 && strlen(password) < sizeof(password) - 1 && isprint(key))
+        {
+            password[strlen(password)] = key;
+        }
+        else if ((choice == 0 || choice == 1) && (key == KEY_BACKSPACE || key == 127))
+        {
+            if (choice == 0 && option == 0 && strlen(username) > 0)
+                username[strlen(username) - 1] = '\0';
+            else if (choice == 0 && option == 1 && strlen(email) > 0)
+                email[strlen(email) - 1] = '\0';
+            else if (choice == 1 && strlen(password) > 0)
+                password[strlen(password) - 1] = '\0';
+        }
+
+        if (option == 0)
+            user_index = username_found(username);
+        else if (option == 1)
+            user_index = email_found(email);
+
+        if (error == 0 && choice == 3 && (key == 10 || key == 32))
+        {
+            break;
+        }
+
+        else if (choice == 4 && (key == 10 || key == 32))
+            option = !option;
+
+        else if (choice == 2 && (key == 10 || key == 32))
+            show_password = !show_password;
+
+        else if (key == KEY_DOWN)
+        {
+            if (choice == 2 || choice == 3)
+                choice = 4;
+            else
+                choice = (choice + 1) % 5;
+        }
+
+        else if (key == KEY_UP)
+        {
+            if (choice == 4)
+                choice = 2;
+            else
+                choice = (choice + 4) % 5;
+        }
+
+        else if ((choice == 2 || choice == 3) && (key == KEY_LEFT || key == KEY_RIGHT))
+            choice = ((choice + 1) % 2) + 2;
+
+        else if ((choice == 0 || choice == 1) && (key == 10 || key == 32))
+            choice += 1;
+    }
+}
+
+int username_found(char username[26]) // Error 1
+{
+    FILE *users = fopen("users.csv", "r");
+
+    if (users == NULL)
+    {
+        perror("Error opening file");
+        return -1;
+    }
+
+    int user_index = 0;
+
+    char file_line[1024];
+    char file_username[256];
+
+    if (fgets(file_line, sizeof(file_line), users) != NULL)
+    {
+        sscanf(file_line, "%255[^,]", file_username);
+        if (strcmp(file_username, username) == 0)
+        {
+            fclose(users);
+            return user_index;
+        }
+
+        user_index += 1;
+    }
+
+    while (fgets(file_line, sizeof(file_line), users))
+    {
+        sscanf(file_line, "%255[^,]", file_username);
+        if (strcmp(file_username, username) == 0)
+        {
+            fclose(users);
+            return user_index;
+        }
+        user_index += 1;
+    }
+
+    fclose(users);
+    return -1; // user not found
+}
+
+int email_found(char email[29]) // Error 2
+{
+    FILE *users = fopen("users.csv", "r");
+
+    if (users == NULL)
+    {
+        perror("Error opening file");
+        return -1;
+    }
+
+    int user_index = 0;
+    char file_line[1024];
+    char file_username[256], file_email[256];
+
+    while (fgets(file_line, sizeof(file_line), users))
+    {
+        sscanf(file_line, "%255[^,],%255[^,]", file_username, file_email);
+        if (strcmp(file_email, email) == 0)
+        {
+            fclose(users);
+            return user_index;
+        }
+        user_index += 1;
+    }
+
+    fclose(users);
+    return -1; // email not found
+}
+
+bool password_correct(int user_index, char password[26]) // Error 3
+{
+    FILE *users = fopen("users.csv", "r");
+
+    if (users == NULL)
+    {
+        perror("Error opening file");
+        return false;
+    }
+
+    char trash[1024];
+    char temp_username[256], temp_email[256];
+    char file_line[1024];
+    char file_password[256];
+
+    for (int i = 0; i <= user_index; i++)
+    {
+        if (fgets(file_line, sizeof(file_line), users) == NULL)
+        {
+            fclose(users);
+            return false;
+        }
+    }
+
+    sscanf(file_line, "%255[^,],%255[^,],%255[^\n]", temp_username, temp_email, file_password);
+
+    if (strcmp(password, file_password) == 0)
+    {
+        fclose(users);
+        return true;
+    }
+
+    fclose(users);
+    return false;
+}
+
+void print_user_not_found() // Error 1
+{
+    mvprintw((LINES / 2) + 3, (COLS / 2) - 24, "__ Error _______________________________________");
+    mvprintw((LINES / 2) + 4, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "|        Usernmae not found. Try again!        |");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+void print_email_not_found() // Error 2
+{
+    mvprintw((LINES / 2) + 3, (COLS / 2) - 24, "__ Error _______________________________________");
+    mvprintw((LINES / 2) + 4, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "|         Email not found. Try again!          |");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+void print_wrong_password() // Error 3
+{
+    mvprintw((LINES / 2) + 3, (COLS / 2) - 24, "__ Error _______________________________________");
+    mvprintw((LINES / 2) + 4, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "|          Wrong Password. Try again!          |");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
 }
 
 void print_level(int level_num)
