@@ -28,11 +28,18 @@ int main()
     title_screen();
 
     int choice = welcome_screen();
+    int user_option_choice;
 
     if (choice == 0)
+    {
         continue_game_screen();
+        user_option_choice = user_options_menu();
+    }
+
     else if (choice == 1)
+    {
         new_account_screen();
+    }
 
     random_map();
 
@@ -894,4 +901,60 @@ void print_wrong_password() // Error 3
     mvprintw((LINES / 2) + 5, (COLS / 2) - 24, "|          Wrong Password. Try again!          |");
     mvprintw((LINES / 2) + 6, (COLS / 2) - 24, "|                                              |");
     mvprintw((LINES / 2) + 7, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+// User Options Menu
+void draw_user_options_menu()
+{
+    clear();
+    draw_border();
+    mvprintw((LINES / 2) - 8, (COLS / 2) - 18, "__ User Options ____________________");
+    mvprintw((LINES / 2) - 6, (COLS / 2) - 11, "New Game");
+    mvprintw((LINES / 2) - 4, (COLS / 2) - 11, "Continue Previous Game");
+    mvprintw((LINES / 2) - 2, (COLS / 2) - 11, "View Score Board");
+    mvprintw((LINES / 2), (COLS / 2) - 11, "My Profile");
+    mvprintw((LINES / 2), (COLS / 2) + 3, "Settings");
+    mvprintw((LINES / 2) + 2, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+    for (int i = 0; i < 9; i++)
+    {
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) - 18, "|");
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) + 17, "|");
+    }
+}
+
+int user_options_menu()
+{
+    int choice = 0;
+    while (1)
+    {
+        draw_user_options_menu();
+
+        if (choice < 4)
+            mvprintw((LINES / 2) - 6 + (2 * choice), (COLS / 2) - 13, ">");
+        else if (choice == 4)
+            mvprintw((LINES / 2), (COLS / 2) + 1, ">");
+
+        int key = getch();
+
+        if (key == 10 || key == 32)
+            return choice;
+
+        else if (choice != 3 && key == KEY_DOWN)
+            choice = (choice + 1) % 5;
+
+        else if (choice == 3 && key == KEY_DOWN)
+            choice = 0;
+
+        else if (choice != 4 && choice != 0 && key == KEY_UP)
+            choice = (choice + 4) % 5;
+
+        else if (choice == 4 && key == KEY_UP)
+            choice = 2;
+
+        else if (choice == 0 && key == KEY_UP)
+            choice = 3;
+
+        else if ((choice == 3 || choice == 4) && (key == KEY_LEFT || key == KEY_RIGHT))
+            choice = ((choice) % 2) + 3;
+    }
 }

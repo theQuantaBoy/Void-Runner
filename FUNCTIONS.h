@@ -43,4 +43,7 @@ void print_user_not_found();
 void print_email_not_found();
 void print_wrong_password();
 
+void draw_user_options_menu();
+int user_options_menu();
+
 #endif
