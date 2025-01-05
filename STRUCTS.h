@@ -51,6 +51,8 @@ typedef struct
     char username[26];
     char password[29];
     char email[26];
+    int difficulty;
+    int color_option;
     Map map;
 } User;
 

@@ -22,8 +22,21 @@ int main()
     initscr();
     curs_set(FALSE);
     keypad(stdscr, TRUE);
-    noecho();
 
+    if (can_change_color())
+    {
+        start_color();
+        init_pair(1, COLOR_WHITE, COLOR_BLACK);
+        init_pair(2, COLOR_BLUE, COLOR_BLACK);
+        init_pair(3, COLOR_CYAN, COLOR_BLACK);
+        init_pair(4, COLOR_GREEN, COLOR_BLACK);
+        init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+        init_pair(6, COLOR_RED, COLOR_BLACK);
+        init_pair(7, COLOR_YELLOW, COLOR_BLACK);
+    }
+
+    noecho();
+    attron(COLOR_PAIR(1));
     draw_border();
     title_screen();
 
@@ -34,6 +47,8 @@ int main()
     {
         continue_game_screen();
         user_option_choice = user_options_menu();
+        if (user_option_choice == 4)
+            user_settings_menu();
     }
 
     else if (choice == 1)
@@ -41,13 +56,13 @@ int main()
         new_account_screen();
     }
 
-    random_map();
+    // random_map();
 
-    for (int i = 0; i < 4; i++)
-    {
-        print_level(i);
-        getchar();
-    }
+    // for (int i = 0; i < 4; i++)
+    // {
+    //     print_level(i);
+    //     getchar();
+    // }
 
     endwin();
     clear();
@@ -734,6 +749,11 @@ void continue_game_screen()
 
         if (error == 0 && choice == 3 && (key == 10 || key == 32))
         {
+            if (option == 0)
+                strcpy(current_user.username, username);
+            if (option == 1)
+                strcpy(current_user.email, email);
+            strcpy(current_user.password, password);
             break;
         }
 
@@ -956,5 +976,117 @@ int user_options_menu()
 
         else if ((choice == 3 || choice == 4) && (key == KEY_LEFT || key == KEY_RIGHT))
             choice = ((choice) % 2) + 3;
+    }
+}
+
+// User Settings Menu
+void draw_user_settings_menu()
+{
+    clear();
+    draw_border();
+    mvprintw((LINES / 2) - 8, (COLS / 2) - 28, "__ Settings ___________________________________________");
+    mvprintw((LINES / 2) - 6, (COLS / 2) - 21, "Difficulty   [                    ]  (    %%)");
+    mvprintw((LINES / 2) - 4, (COLS / 2) - 21, "Hero Color     - Color Option   -     (   )");
+    mvprintw((LINES / 2) - 2, (COLS / 2) - 4, "Confirm");
+    mvprintw((LINES / 2), (COLS / 2) - 28, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+
+    for (int i = 0; i < 7; i++)
+    {
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) - 28, "|");
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) + 26, "|");
+    }
+
+    mvprintw((LINES / 2) + 2, (COLS / 2) - 28, "__ Hint _______________________________________________");
+    mvprintw((LINES / 2) + 3, (COLS / 2) - 28, "|                                                     |");
+    mvprintw((LINES / 2) + 4, (COLS / 2) - 28, "|      Use left and right arrows to change your       |");
+    mvprintw((LINES / 2) + 5, (COLS / 2) - 28, "|     game's difficulty or your chracter's color.     |");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 28, "|                                                     |");
+    mvprintw((LINES / 2) + 7, (COLS / 2) - 28, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+}
+
+void user_settings_menu()
+{
+    int choice = 0;
+    int difficulty = 20;
+    int color_option = 1;
+
+    while (1)
+    {
+        clear();
+        draw_user_settings_menu();
+
+        if (choice == 0)
+            mvprintw((LINES / 2) - 6, (COLS / 2) - 23, ">");
+        else if (choice == 1)
+            mvprintw((LINES / 2) - 4, (COLS / 2) - 23, ">");
+        else if (choice == 2)
+        {
+            attron(A_REVERSE);
+            mvprintw((LINES / 2) - 2, (COLS / 2) - 4, "Confirm");
+            attroff(A_REVERSE);
+        }
+
+        move((LINES / 2) - 6, (COLS / 2) - 7);
+        for (int i = 0; i < difficulty; i++)
+            printw("#");
+        for (int i = 0; i < 20 - difficulty; i++)
+            printw("·");
+
+        mvprintw((LINES / 2) - 4, (COLS / 2) + 9, "%d", color_option);
+
+        attroff(COLOR_PAIR(1));
+        attron(COLOR_PAIR(color_option));
+        mvprintw((LINES / 2) - 4, (COLS / 2) + 19, "@");
+        attroff(COLOR_PAIR(color_option));
+        attron(COLOR_PAIR(1));
+
+        if (difficulty < 2)
+            mvprintw((LINES / 2) - 6, (COLS / 2) + 19, "%d", (5 * difficulty));
+        else if (difficulty < 20)
+            mvprintw((LINES / 2) - 6, (COLS / 2) + 18, "%d", (5 * difficulty));
+        else
+            mvprintw((LINES / 2) - 6, (COLS / 2) + 17, "%d", (5 * difficulty));
+
+        int key = getch();
+
+        if (choice == 2 && (key == 10 || key == 32))
+        {
+            current_user.difficulty = difficulty;
+            current_user.color_option = color_option;
+            break;
+        }
+
+        if (key == KEY_DOWN)
+            choice = (choice + 1) % 3;
+        else if (key == KEY_UP)
+            choice = (choice + 2) % 3;
+        else if (choice == 0 && key == KEY_LEFT)
+        {
+            if (difficulty > 0)
+                difficulty -= 1;
+        }
+        else if (choice == 0 && key == KEY_RIGHT)
+        {
+            if (difficulty < 20)
+                difficulty += 1;
+        }
+        else if (choice == 0 && key == KEY_LEFT)
+        {
+            if (difficulty > 0)
+                difficulty -= 1;
+        }
+        else if (choice == 0 && key == KEY_RIGHT)
+        {
+            if (difficulty < 20)
+                difficulty += 1;
+        }
+        else if (choice == 1 && key == KEY_LEFT)
+        {
+            color_option = ((color_option + 5) % 7) + 1;
+        }
+        else if (choice == 1 && key == KEY_RIGHT)
+        {
+            color_option = ((color_option) % 7) + 1;
+        }
     }
 }

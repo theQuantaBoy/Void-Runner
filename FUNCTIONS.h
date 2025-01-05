@@ -46,4 +46,7 @@ void print_wrong_password();
 void draw_user_options_menu();
 int user_options_menu();
 
+void draw_user_settings_menu();
+void user_settings_menu();
+
 #endif
