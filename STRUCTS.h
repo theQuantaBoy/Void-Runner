@@ -5,7 +5,7 @@
 #define MIN_ROOM_WIDTH 10
 #define MIN_ROOM_LENGTH 10
 #define MIN_DISTANCE 10
-#define MARGIN 5
+#define MARGIN 4
 #define MAX_ROOM_RATIO 1.6
 #define MIN_ROOM_RATIO 0.6
 
@@ -53,5 +53,12 @@ typedef struct
     char email[26];
     Map map;
 } User;
+
+typedef struct
+{
+    Room bounds;
+    Room room;
+    struct Partition *left, *right;
+} Partition;
 
 #endif

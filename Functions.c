@@ -10,7 +10,6 @@
 
 #include "ASCII_ART.h"
 #include "FUNCTIONS.h"
-#include "STRUCTS.h"
 
 Level level[4];
 User current_user;
