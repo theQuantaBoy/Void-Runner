@@ -16,6 +16,8 @@ void random_room(int y_min, int y_max, int x_min, int x_max, Room *room);
 void print_level(int level_num);
 void print_room(int level_num, int room_num);
 void save_user_room(char username[26], int level, int room);
+void load_user_map(char username[26]);
+
 void draw_welcome_screen_border();
 int welcome_screen();
 

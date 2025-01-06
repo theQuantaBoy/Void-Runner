@@ -59,6 +59,10 @@ int main()
                 }
             }
         }
+        if (user_option_choice == 1) // continue_previous_game
+        {
+            load_user_map(current_user.username);
+        }
         if (user_option_choice == 4)
             user_settings_menu();
     }
@@ -69,6 +73,7 @@ int main()
         user_option_choice = user_options_menu();
         if (user_option_choice == 0) // New Game
         {
+            return false;
             random_map();
             for (int i = 0; i < 4; i++)
             {
@@ -271,6 +276,36 @@ void save_user_room(char username[26], int level, int room)
     {
         fprintf(users_map, "%s,%d,%d,%d,%d,%d,%d\n", username, level, room, current_level[level].room[room].corner.y,
                 current_level[level].room[room].corner.x, current_level[level].room[room].width, current_level[level].room[room].length);
+    }
+}
+
+void load_user_map(char username[26])
+{
+    FILE *users_map = fopen("users_map.csv", "r");
+
+    if (users_map == NULL)
+    {
+        perror("Error opening file");
+    }
+
+    char file_line[1024];
+    char file_username[256];
+
+    int number_of_rooms = 24, level_num, room_num, corner_y, corner_x, corner_length, width, length;
+
+    while (fgets(file_line, sizeof(file_line), users_map) != NULL)
+    {
+        fscanf(users_map, "%[^,],%d,%d,%d,%d,%d,%d\n", file_username, &level_num, &room_num, &corner_x, &corner_y, &width, &length);
+        if (strcmp(file_username, username) == 0)
+        {
+            current_level[level_num].room[room_num].corner.y = corner_y;
+            current_level[level_num].room[room_num].corner.x = corner_x;
+            current_level[level_num].room[room_num].width = width;
+            current_level[level_num].room[room_num].length = length;
+            number_of_rooms -= 1;
+        }
+        if (number_of_rooms == 0)
+            break;
     }
 }
 
