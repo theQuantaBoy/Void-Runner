@@ -11,7 +11,7 @@
 #include "ASCII_ART.h"
 #include "FUNCTIONS.h"
 
-Level level[4];
+Level current_level[4];
 User current_user;
 
 int main()
@@ -44,31 +44,89 @@ int main()
     int choice = welcome_screen();
     int user_option_choice;
 
-    if (choice == 0)
+    if (choice == 0) // continue game
     {
         continue_game_screen();
         user_option_choice = user_options_menu();
+        if (user_option_choice == 0) // New Game
+        {
+            random_map();
+            for (int i = 0; i < 4; i++)
+            {
+                for (int j = 0; j < 6; j++)
+                {
+                    save_user_room(current_user.username, i, j);
+                }
+            }
+        }
         if (user_option_choice == 4)
             user_settings_menu();
     }
 
-    else if (choice == 1)
+    else if (choice == 1) // create new account
     {
         new_account_screen();
-    }
-
-    random_map();
-
-    for (int i = 0; i < 4; i++)
-    {
-        print_level(i);
-        getchar();
+        user_option_choice = user_options_menu();
+        if (user_option_choice == 0) // New Game
+        {
+            random_map();
+            for (int i = 0; i < 4; i++)
+            {
+                for (int j = 0; j < 6; j++)
+                {
+                    save_user_room(current_user.username, i, j);
+                }
+            }
+        }
+        if (user_option_choice == 4)
+            user_settings_menu();
     }
 
     endwin();
     clear();
 
     return 0;
+}
+
+int find_user_index(char username[26])
+{
+    FILE *users = fopen("users.csv", "r");
+
+    if (users == NULL)
+    {
+        perror("Error opening file");
+        return false;
+    }
+
+    char file_line[1024];
+    char file_username[256];
+
+    int index = 0;
+
+    if (fgets(file_line, sizeof(file_line), users) != NULL)
+    {
+        sscanf(file_line, "%255[^,]", file_username);
+        if (strcmp(file_username, username) == 0)
+        {
+            fclose(users);
+            return index;
+        }
+        index += 1;
+    }
+
+    while (fgets(file_line, sizeof(file_line), users))
+    {
+        sscanf(file_line, "%255[^,]", file_username);
+        if (strcmp(file_username, username) == 0)
+        {
+            fclose(users);
+            return index;
+        }
+        index += 1;
+    }
+
+    fclose(users);
+    return (-1);
 }
 
 void draw_border()
@@ -153,14 +211,14 @@ void random_level(int level_num)
 
     x_values[7] = COLS - MARGIN;
 
-    level[level_num].room_num = 0;
+    current_level[level_num].room_num = 0;
 
     for (int i = 0; i < 2; i++)
     {
         for (int j = 0; j < 3; j++)
         {
-            random_room(y_values[i], y_values[i + 1], x_values[(4 * i) + j], x_values[(4 * i) + j + 1], &level[level_num].room[level[level_num].room_num]);
-            level[level_num].room_num += 1;
+            random_room(y_values[i], y_values[i + 1], x_values[(4 * i) + j], x_values[(4 * i) + j + 1], &current_level[level_num].room[current_level[level_num].room_num]);
+            current_level[level_num].room_num += 1;
         }
     }
 }
@@ -170,16 +228,16 @@ void print_level(int level_num)
     clear();
     draw_border();
 
-    for (int i = 0; i < level[level_num].room_num; i++)
+    for (int i = 0; i < current_level[level_num].room_num; i++)
         print_room(level_num, i);
 }
 
 void print_room(int level_num, int room_num)
 {
-    int x = level[level_num].room[room_num].corner.x;
-    int y = level[level_num].room[room_num].corner.y;
-    int length = level[level_num].room[room_num].length;
-    int width = level[level_num].room[room_num].width;
+    int x = current_level[level_num].room[room_num].corner.x;
+    int y = current_level[level_num].room[room_num].corner.y;
+    int length = current_level[level_num].room[room_num].length;
+    int width = current_level[level_num].room[room_num].width;
 
     for (int i = 0; i < length; i++)
     {
@@ -198,6 +256,22 @@ void print_room(int level_num, int room_num)
     }
 
     refresh();
+}
+
+void save_user_room(char username[26], int level, int room)
+{
+    FILE *users_map = fopen("users_map.csv", "a");
+
+    if (users_map == NULL)
+    {
+        perror("Error opening file");
+    }
+
+    else
+    {
+        fprintf(users_map, "%s,%d,%d,%d,%d,%d,%d\n", username, level, room, current_level[level].room[room].corner.y,
+                current_level[level].room[room].corner.x, current_level[level].room[room].width, current_level[level].room[room].length);
+    }
 }
 
 // Welcome Screen - Manu
