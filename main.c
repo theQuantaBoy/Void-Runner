@@ -37,6 +37,7 @@ int main()
 
     noecho();
     attron(COLOR_PAIR(1));
+
     draw_border();
     title_screen();
 
