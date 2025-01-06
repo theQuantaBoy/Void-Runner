@@ -47,24 +47,41 @@ int main()
     if (choice == 0) // continue game
     {
         continue_game_screen();
-        user_option_choice = user_options_menu();
-        if (user_option_choice == 0) // New Game
+
+        while (1)
         {
-            random_map();
-            for (int i = 0; i < 4; i++)
+            user_option_choice = user_options_menu();
+
+            if (user_option_choice == 0) // New Game
             {
-                for (int j = 0; j < 6; j++)
+                random_map();
+                for (int i = 0; i < 4; i++)
                 {
-                    save_user_room(current_user.username, i, j);
+                    for (int j = 0; j < 6; j++)
+                    {
+                        save_user_room(current_user.username, i, j);
+                    }
                 }
+                break;
             }
+
+            if (user_option_choice == 1) // continue_previous_game
+            {
+                load_user_map(current_user.username);
+                break;
+            }
+
+            if (user_option_choice == 2) // View Score Board
+            {
+            }
+
+            if (user_option_choice == 3) // My Profile
+            {
+            }
+
+            if (user_option_choice == 4)
+                user_settings_menu();
         }
-        if (user_option_choice == 1) // continue_previous_game
-        {
-            load_user_map(current_user.username);
-        }
-        if (user_option_choice == 4)
-            user_settings_menu();
     }
 
     else if (choice == 1) // create new account
@@ -100,7 +117,6 @@ int find_user_index(char username[26])
     if (users == NULL)
     {
         perror("Error opening file");
-        return false;
     }
 
     char file_line[1024];
@@ -132,6 +148,68 @@ int find_user_index(char username[26])
 
     fclose(users);
     return (-1);
+}
+
+char *data_from_username(char username[26], int *difficulty, int *color_option)
+{
+    char *result = (char *)malloc(29 * sizeof(char));
+
+    FILE *users = fopen("users.csv", "r");
+
+    if (users == NULL)
+    {
+        perror("Error opening file");
+        return NULL;
+    }
+
+    char file_line[1024];
+    char file_username[26], file_password[26];
+    int file_difficulty, file_color_option;
+
+    while (fgets(file_line, sizeof(file_line), users) != NULL)
+    {
+        if (sscanf(file_line, "%255[^,],%255[^,],%255[^,],%d,%d", file_username, result, file_password, &file_difficulty, &file_color_option) == 5)
+        {
+            if (strcmp(file_username, username) == 0)
+            {
+                fclose(users);
+                *difficulty = file_difficulty;
+                *color_option = file_color_option;
+                return result;
+            }
+        }
+    }
+}
+
+char *data_from_email(char email[29], int *difficulty, int *color_option)
+{
+    char *result = (char *)malloc(26 * sizeof(char));
+
+    FILE *users = fopen("users.csv", "r");
+
+    if (users == NULL)
+    {
+        perror("Error opening file");
+        return NULL;
+    }
+
+    char file_line[1024];
+    char file_email[29], file_password[26];
+    int file_difficulty, file_color_option;
+
+    while (fgets(file_line, sizeof(file_line), users) != NULL)
+    {
+        if (sscanf(file_line, "%255[^,],%255[^,],%255[^,],%d,%d", result, file_email, file_password, &file_difficulty, &file_color_option) == 5)
+        {
+            if (strcmp(file_email, email) == 0)
+            {
+                fclose(users);
+                *difficulty = file_difficulty;
+                *color_option = file_color_option;
+                return result;
+            }
+        }
+    }
 }
 
 void draw_border()
@@ -490,8 +568,10 @@ void new_account_screen()
             strcpy(current_user.username, username);
             strcpy(current_user.email, email);
             strcpy(current_user.password, password);
+            current_user.difficulty = 20;
+            current_user.color_option = 1;
 
-            save_user_data(username, email, password);
+            save_user_data(username, email, password, 20, 1);
 
             break;
         }
@@ -523,10 +603,10 @@ void new_account_screen()
     }
 }
 
-void save_user_data(char username[26], char email[29], char password[26])
+void save_user_data(char username[26], char email[29], char password[26], int difficulty, int color_option)
 {
     FILE *users = fopen("users.csv", "a");
-    fprintf(users, "%s,%s,%s\n", username, email, password);
+    fprintf(users, "%s,%s,%s,%d,%d\n", username, email, password, difficulty, color_option);
     fclose(users);
 }
 
@@ -866,9 +946,19 @@ void continue_game_screen()
         if (error == 0 && choice == 3 && (key == 10 || key == 32))
         {
             if (option == 0)
+            {
                 strcpy(current_user.username, username);
+                char *temp_email = data_from_username(username, &current_user.difficulty, &current_user.color_option);
+                strcpy(current_user.email, temp_email);
+            }
+
             if (option == 1)
+            {
                 strcpy(current_user.email, email);
+                char *temp_username = data_from_email(email, &current_user.difficulty, &current_user.color_option);
+                strcpy(current_user.username, temp_username);
+            }
+
             strcpy(current_user.password, password);
             break;
         }
@@ -999,7 +1089,7 @@ bool password_correct(int user_index, char password[26]) // Error 3
         }
     }
 
-    sscanf(file_line, "%255[^,],%255[^,],%255[^\n]", temp_username, temp_email, file_password);
+    sscanf(file_line, "%255[^,],%255[^,],%255[^,]", temp_username, temp_email, file_password);
 
     if (strcmp(password, file_password) == 0)
     {
@@ -1103,7 +1193,7 @@ void draw_user_settings_menu()
     mvprintw((LINES / 2) - 8, (COLS / 2) - 28, "__ Settings ___________________________________________");
     mvprintw((LINES / 2) - 6, (COLS / 2) - 21, "Difficulty   [                    ]  (    %%)");
     mvprintw((LINES / 2) - 4, (COLS / 2) - 21, "Hero Color     - Color Option   -     (   )");
-    mvprintw((LINES / 2) - 2, (COLS / 2) - 4, "Confirm");
+    mvprintw((LINES / 2) - 2, (COLS / 2) - 4, "Go Back");
     mvprintw((LINES / 2), (COLS / 2) - 28, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
 
     for (int i = 0; i < 7; i++)
@@ -1123,8 +1213,6 @@ void draw_user_settings_menu()
 void user_settings_menu()
 {
     int choice = 0;
-    int difficulty = 20;
-    int color_option = 1;
 
     while (1)
     {
@@ -1143,32 +1231,32 @@ void user_settings_menu()
         }
 
         move((LINES / 2) - 6, (COLS / 2) - 7);
-        for (int i = 0; i < difficulty; i++)
+        for (int i = 0; i < current_user.difficulty; i++)
             printw("#");
-        for (int i = 0; i < 20 - difficulty; i++)
+        for (int i = 0; i < 20 - current_user.difficulty; i++)
             printw("·");
 
-        mvprintw((LINES / 2) - 4, (COLS / 2) + 9, "%d", color_option);
+        mvprintw((LINES / 2) - 4, (COLS / 2) + 9, "%d", current_user.color_option);
 
         attroff(COLOR_PAIR(1));
-        attron(COLOR_PAIR(color_option));
+        attron(COLOR_PAIR(current_user.color_option));
         mvprintw((LINES / 2) - 4, (COLS / 2) + 19, "@");
-        attroff(COLOR_PAIR(color_option));
+        attroff(COLOR_PAIR(current_user.color_option));
         attron(COLOR_PAIR(1));
 
-        if (difficulty < 2)
-            mvprintw((LINES / 2) - 6, (COLS / 2) + 19, "%d", (5 * difficulty));
-        else if (difficulty < 20)
-            mvprintw((LINES / 2) - 6, (COLS / 2) + 18, "%d", (5 * difficulty));
+        if (current_user.difficulty < 2)
+            mvprintw((LINES / 2) - 6, (COLS / 2) + 19, "%d", (5 * current_user.difficulty));
+        else if (current_user.difficulty < 20)
+            mvprintw((LINES / 2) - 6, (COLS / 2) + 18, "%d", (5 * current_user.difficulty));
         else
-            mvprintw((LINES / 2) - 6, (COLS / 2) + 17, "%d", (5 * difficulty));
+            mvprintw((LINES / 2) - 6, (COLS / 2) + 17, "%d", (5 * current_user.difficulty));
 
         int key = getch();
 
         if (choice == 2 && (key == 10 || key == 32))
         {
-            current_user.difficulty = difficulty;
-            current_user.color_option = color_option;
+            current_user.difficulty = current_user.difficulty;
+            current_user.color_option = current_user.color_option;
             break;
         }
 
@@ -1178,31 +1266,31 @@ void user_settings_menu()
             choice = (choice + 2) % 3;
         else if (choice == 0 && key == KEY_LEFT)
         {
-            if (difficulty > 0)
-                difficulty -= 1;
+            if (current_user.difficulty > 0)
+                current_user.difficulty -= 1;
         }
         else if (choice == 0 && key == KEY_RIGHT)
         {
-            if (difficulty < 20)
-                difficulty += 1;
+            if (current_user.difficulty < 20)
+                current_user.difficulty += 1;
         }
         else if (choice == 0 && key == KEY_LEFT)
         {
-            if (difficulty > 0)
-                difficulty -= 1;
+            if (current_user.difficulty > 0)
+                current_user.difficulty -= 1;
         }
         else if (choice == 0 && key == KEY_RIGHT)
         {
-            if (difficulty < 20)
-                difficulty += 1;
+            if (current_user.difficulty < 20)
+                current_user.difficulty += 1;
         }
         else if (choice == 1 && key == KEY_LEFT)
         {
-            color_option = ((color_option + 5) % 7) + 1;
+            current_user.color_option = ((current_user.color_option + 5) % 7) + 1;
         }
         else if (choice == 1 && key == KEY_RIGHT)
         {
-            color_option = ((color_option) % 7) + 1;
+            current_user.color_option = ((current_user.color_option) % 7) + 1;
         }
     }
 }

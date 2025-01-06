@@ -5,6 +5,8 @@
 #include "STRUCTS.h"
 
 int find_user_index(char username[26]);
+char *data_from_username();
+char *data_from_email();
 
 void draw_border();
 
