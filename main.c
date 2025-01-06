@@ -56,13 +56,13 @@ int main()
         new_account_screen();
     }
 
-    // random_map();
+    random_map();
 
-    // for (int i = 0; i < 4; i++)
-    // {
-    //     print_level(i);
-    //     getchar();
-    // }
+    for (int i = 0; i < 4; i++)
+    {
+        print_level(i);
+        getchar();
+    }
 
     endwin();
     clear();
@@ -119,11 +119,11 @@ void random_map()
 
 void random_room(int y_min, int y_max, int x_min, int x_max, Room *room)
 {
-    (*room).corner.y = (rand() % (y_max - y_min - MIN_ROOM_WIDTH - 1)) + (y_min + 1);
-    (*room).corner.x = (rand() % (x_max - x_min - MIN_ROOM_LENGTH - 1)) + (x_min + 1);
+    (*room).corner.y = (rand() % (y_max - y_min - MIN_ROOM_WIDTH - 3)) + (y_min + 2); // max: y_max - MIN_WIDTH - 1
+    (*room).corner.x = (rand() % (x_max - x_min - MIN_ROOM_LENGTH - 3)) + (x_min + 2);
 
-    int max_width = y_max - (*room).corner.y;
-    int max_length = x_max - (*room).corner.x;
+    int max_width = y_max - (*room).corner.y - 1;
+    int max_length = x_max - (*room).corner.x - 1;
 
     (*room).width = (rand() % (max_width - MIN_ROOM_WIDTH)) + MIN_ROOM_WIDTH;
     (*room).length = (rand() % (max_length - MIN_ROOM_LENGTH)) + MIN_ROOM_LENGTH;
@@ -131,19 +131,25 @@ void random_room(int y_min, int y_max, int x_min, int x_max, Room *room)
 
 void random_level(int level_num)
 {
+    int perfect_y = (LINES - (2 * MARGIN)) / 2;
+
     int y_values[3];
     y_values[0] = MARGIN;
-    y_values[1] = (rand() % (LINES / 3)) + (LINES / 6);
+    y_values[1] = MARGIN + (perfect_y - 5) + (rand() % 11);
     y_values[2] = LINES - MARGIN;
+
+    int perfect_x = (COLS - (2 * MARGIN)) / 3;
 
     int x_values[8];
     x_values[0] = MARGIN;
-    x_values[1] = (rand() % (COLS / 5)) + (COLS / 6);
-    x_values[2] = COLS - MARGIN - (COLS / 6) - (rand() % (COLS / 5));
+    x_values[1] = MARGIN + (perfect_x - 8) + (rand() % 17);
+    x_values[2] = COLS - MARGIN - (perfect_x + 8) + (rand() % 17);
+
     x_values[3] = COLS - MARGIN;
     x_values[4] = MARGIN;
-    x_values[5] = (rand() % (COLS / 5)) + (COLS / 6);
-    x_values[6] = COLS - MARGIN - (COLS / 6) - (rand() % (COLS / 5));
+    x_values[5] = MARGIN + (perfect_x - 8) + (rand() % 17);
+    x_values[6] = COLS - MARGIN - (perfect_x + 8) + (rand() % 17);
+
     x_values[7] = COLS - MARGIN;
 
     level[level_num].room_num = 0;

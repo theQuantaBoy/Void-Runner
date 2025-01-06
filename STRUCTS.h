@@ -3,9 +3,9 @@
 
 #define MAX_ROOM_NUM 8
 #define MIN_ROOM_WIDTH 10
-#define MIN_ROOM_LENGTH 10
+#define MIN_ROOM_LENGTH 15
 #define MIN_DISTANCE 10
-#define MARGIN 4
+#define MARGIN 5
 #define MAX_ROOM_RATIO 1.6
 #define MIN_ROOM_RATIO 0.6
 
