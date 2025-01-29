@@ -21,6 +21,12 @@ typedef struct
 typedef struct
 {
     Point corner;
+
+    int door_position;
+    /*    0
+        1   2
+          3
+    */
     Point door;
 
     Point window[4];

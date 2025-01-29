@@ -1,5 +1,4 @@
-test/
 main
 notes/
 *.csv
-.vscode/settings.json
+.vscode/
