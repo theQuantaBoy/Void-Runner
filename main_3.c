@@ -102,6 +102,7 @@ int main()
 
                 if (user_option_choice == 2) // View Score Board
                 {
+                    score_board_menu();
                 }
 
                 if (user_option_choice == 3) // My Profile
@@ -2975,68 +2976,6 @@ int find_user_index(char username[26])
     return (-1);
 }
 
-char *data_from_username(char username[26], int *difficulty, int *color_option)
-{
-    char *result = (char *)malloc(29 * sizeof(char));
-
-    FILE *users = fopen("users.csv", "r");
-
-    if (users == NULL)
-    {
-        perror("Error opening file");
-        return NULL;
-    }
-
-    char file_line[1024];
-    char file_username[26], file_password[26];
-    int file_difficulty, file_color_option;
-
-    while (fgets(file_line, sizeof(file_line), users) != NULL)
-    {
-        if (sscanf(file_line, "%255[^,],%255[^,],%255[^,],%d,%d", file_username, result, file_password, &file_difficulty, &file_color_option) == 5)
-        {
-            if (strcmp(file_username, username) == 0)
-            {
-                fclose(users);
-                *difficulty = file_difficulty;
-                *color_option = file_color_option;
-                return result;
-            }
-        }
-    }
-}
-
-char *data_from_email(char email[29], int *difficulty, int *color_option)
-{
-    char *result = (char *)malloc(26 * sizeof(char));
-
-    FILE *users = fopen("users.csv", "r");
-
-    if (users == NULL)
-    {
-        perror("Error opening file");
-        return NULL;
-    }
-
-    char file_line[1024];
-    char file_email[29], file_password[26];
-    int file_difficulty, file_color_option;
-
-    while (fgets(file_line, sizeof(file_line), users) != NULL)
-    {
-        if (sscanf(file_line, "%255[^,],%255[^,],%255[^,],%d,%d", result, file_email, file_password, &file_difficulty, &file_color_option) == 5)
-        {
-            if (strcmp(file_email, email) == 0)
-            {
-                fclose(users);
-                *difficulty = file_difficulty;
-                *color_option = file_color_option;
-                return result;
-            }
-        }
-    }
-}
-
 void title_screen()
 {
     char game_start[] = "- Press any key to continue -";
@@ -3125,6 +3064,7 @@ void draw_new_account_screen(int show_password)
 
 void new_account_screen()
 {
+    User *temp = malloc(sizeof(User));
     char username[26] = {};
     char email[29] = {};
     char password[26] = {};
@@ -3238,19 +3178,25 @@ void new_account_screen()
 
         if (error == 0 && choice == 4 && (key == 10 || key == 32))
         {
-            strcpy(current_user.username, username);
-            strcpy(current_user.email, email);
-            strcpy(current_user.password, password);
-            current_user.difficulty = 20;
-            current_user.color_option = 1;
+            strcpy(temp->username, username);
+            strcpy(temp->email, email);
+            strcpy(temp->password, password);
+            temp->difficulty = 20;
+            temp->color_option = 1;
+            temp->game_num = 0;
+            temp->win_num = 0;
+            temp->total_gold = 0;
+            temp->total_score = 0;
 
-            save_user_data(username, email, password, 20, 1);
-
+            save_user_to_csv("users.csv", temp);
             break;
         }
 
         else if (choice == 3 && (key == 10 || key == 32))
             show_password = !show_password;
+
+        else if (choice == 5 && (key == 10 || key == 32))
+            strcpy(password, generate_password());
 
         else if (key == KEY_DOWN)
         {
@@ -3274,13 +3220,6 @@ void new_account_screen()
         else if ((choice == 0 || choice == 1 || choice == 2) && key == 10)
             choice += 1;
     }
-}
-
-void save_user_data(char username[26], char email[29], char password[26], int difficulty, int color_option)
-{
-    FILE *users = fopen("users.csv", "a");
-    fprintf(users, "%s,%s,%s,%d,%d\n", username, email, password, difficulty, color_option);
-    fclose(users);
 }
 
 // Create New Account - Check Errors
@@ -3493,6 +3432,84 @@ void draw_sign_in_screen(int option, int show_password)
     }
 }
 
+void load_users()
+{
+    if (game.users != NULL)
+    {
+        // Free existing users if already loaded
+        for (int i = 0; i < game.users_num; i++)
+        {
+            free(game.users[i]);
+        }
+        free(game.users);
+    }
+
+    // Load users from CSV
+    if (load_users_from_csv("users.csv", &game.users, &game.users_num) != 0)
+    {
+        fprintf(stderr, "Error: Failed to load users from CSV!\n");
+        exit(1);
+    }
+}
+
+int username_found(const char *username)
+{
+    for (int i = 0; i < game.users_num; i++)
+    {
+        if (strcmp(game.users[i]->username, username) == 0)
+        {
+            return i; // Return the index of the user
+        }
+    }
+    return -1; // User not found
+}
+
+// Function to find a user by email
+int email_found(const char *email)
+{
+    for (int i = 0; i < game.users_num; i++)
+    {
+        if (strcmp(game.users[i]->email, email) == 0)
+        {
+            return i; // Return the index of the user
+        }
+    }
+    return -1; // Email not found
+}
+
+// Function to check if the password is correct
+bool password_correct(int user_index, const char *password)
+{
+    if (user_index < 0 || user_index >= game.users_num)
+    {
+        return false; // Invalid index
+    }
+    return strcmp(game.users[user_index]->password, password) == 0;
+}
+
+// Function to get user data by username
+void data_from_username(const char *username, int *difficulty, int *color_option)
+{
+    int index = username_found(username);
+    if (index != -1)
+    {
+        *difficulty = game.users[index]->difficulty;
+        *color_option = game.users[index]->color_option;
+    }
+}
+
+// Function to get user data by email
+void data_from_email(const char *email, int *difficulty, int *color_option)
+{
+    int index = email_found(email);
+    if (index != -1)
+    {
+        *difficulty = game.users[index]->difficulty;
+        *color_option = game.users[index]->color_option;
+    }
+}
+
+// Updated continue_game_screen function
 void continue_game_screen()
 {
     char username[26] = {};
@@ -3502,6 +3519,9 @@ void continue_game_screen()
     int show_password = 0;
     int choice = 0, error = 0, user_index = -2;
     int option = 0; // 0: username - 1: email
+
+    // Load users into memory
+    load_users();
 
     while (1)
     {
@@ -3564,7 +3584,6 @@ void continue_game_screen()
                 mvprintw((LINES / 2), (COLS / 2) - 10, "Continue with Email");
                 attroff(A_REVERSE);
             }
-
             else if (option == 1)
             {
                 attron(A_REVERSE);
@@ -3585,7 +3604,9 @@ void continue_game_screen()
                 move((LINES / 2) - 4, (COLS / 2) - 7 + strlen(password));
         }
         else
+        {
             curs_set(0);
+        }
 
         int key = getch();
 
@@ -3621,27 +3642,23 @@ void continue_game_screen()
             if (option == 0)
             {
                 strcpy(current_user.username, username);
-                char *temp_email = data_from_username(username, &current_user.difficulty, &current_user.color_option);
-                strcpy(current_user.email, temp_email);
+                data_from_username(username, &current_user.difficulty, &current_user.color_option);
+                strcpy(current_user.email, game.users[user_index]->email);
             }
-
-            if (option == 1)
+            else if (option == 1)
             {
                 strcpy(current_user.email, email);
-                char *temp_username = data_from_email(email, &current_user.difficulty, &current_user.color_option);
-                strcpy(current_user.username, temp_username);
+                data_from_email(email, &current_user.difficulty, &current_user.color_option);
+                strcpy(current_user.username, game.users[user_index]->username);
             }
 
             strcpy(current_user.password, password);
             break;
         }
-
         else if (choice == 4 && (key == 10 || key == 32))
             option = !option;
-
         else if (choice == 2 && (key == 10 || key == 32))
             show_password = !show_password;
-
         else if (key == KEY_DOWN)
         {
             if (choice == 2 || choice == 3)
@@ -3649,7 +3666,6 @@ void continue_game_screen()
             else
                 choice = (choice + 1) % 5;
         }
-
         else if (key == KEY_UP)
         {
             if (choice == 4)
@@ -3657,121 +3673,11 @@ void continue_game_screen()
             else
                 choice = (choice + 4) % 5;
         }
-
         else if ((choice == 2 || choice == 3) && (key == KEY_LEFT || key == KEY_RIGHT))
             choice = ((choice + 1) % 2) + 2;
-
         else if ((choice == 0 || choice == 1) && (key == 10 || key == 32))
             choice += 1;
     }
-}
-
-// Sign In - Check User Data
-int username_found(char username[26]) // Error 1
-{
-    FILE *users = fopen("users.csv", "r");
-
-    if (users == NULL)
-    {
-        perror("Error opening file");
-        return -1;
-    }
-
-    int user_index = 0;
-
-    char file_line[1024];
-    char file_username[256];
-
-    if (fgets(file_line, sizeof(file_line), users) != NULL)
-    {
-        sscanf(file_line, "%255[^,]", file_username);
-        if (strcmp(file_username, username) == 0)
-        {
-            fclose(users);
-            return user_index;
-        }
-
-        user_index += 1;
-    }
-
-    while (fgets(file_line, sizeof(file_line), users))
-    {
-        sscanf(file_line, "%255[^,]", file_username);
-        if (strcmp(file_username, username) == 0)
-        {
-            fclose(users);
-            return user_index;
-        }
-        user_index += 1;
-    }
-
-    fclose(users);
-    return -1; // user not found
-}
-
-int email_found(char email[29]) // Error 2
-{
-    FILE *users = fopen("users.csv", "r");
-
-    if (users == NULL)
-    {
-        perror("Error opening file");
-        return -1;
-    }
-
-    int user_index = 0;
-    char file_line[1024];
-    char file_username[256], file_email[256];
-
-    while (fgets(file_line, sizeof(file_line), users))
-    {
-        sscanf(file_line, "%255[^,],%255[^,]", file_username, file_email);
-        if (strcmp(file_email, email) == 0)
-        {
-            fclose(users);
-            return user_index;
-        }
-        user_index += 1;
-    }
-
-    fclose(users);
-    return -1; // email not found
-}
-
-bool password_correct(int user_index, char password[26]) // Error 3
-{
-    FILE *users = fopen("users.csv", "r");
-
-    if (users == NULL)
-    {
-        perror("Error opening file");
-        return false;
-    }
-
-    char trash[1024];
-    char temp_username[256], temp_email[256];
-    char file_line[1024];
-    char file_password[256];
-
-    for (int i = 0; i <= user_index; i++)
-    {
-        if (fgets(file_line, sizeof(file_line), users) == NULL)
-        {
-            fclose(users);
-            return false;
-        }
-    }
-
-    sscanf(file_line, "%255[^,],%255[^,],%255[^,]", temp_username, temp_email, file_password);
-
-    if (strcmp(password, file_password) == 0)
-    {
-        fclose(users);
-        return true;
-    }
-
-    fclose(users);
-    return false;
 }
 
 // Sign In - Print Errors
@@ -4411,17 +4317,17 @@ void draw_score_board_menu()
 {
     clear();
     attron(COLOR_PAIR(1));
-    mvprintw((LINES / 2) - 10, (COLS / 2) - 46, "__ Score Board _____________________________________________________________________________");
-    mvprintw((LINES / 2) - 8, (COLS / 2) - 41, "Rank      Champion                   Score      Gold      Wins / Games      Epithet");
+    mvprintw((LINES / 2) - 12, (COLS / 2) - 46, "__ Score Board _____________________________________________________________________________");
+    mvprintw((LINES / 2) - 10, (COLS / 2) - 41, "Rank      Champion                   Score      Gold      Wins / Games      Epithet");
     for (int i = 0; i < 19; i++)
     {
-        mvprintw((LINES / 2) - 9 + i, (COLS / 2) - 46, "|");
-        mvprintw((LINES / 2) - 9 + i, (COLS / 2) + 45, "|");
+        mvprintw((LINES / 2) - 11 + i, (COLS / 2) - 46, "|");
+        mvprintw((LINES / 2) - 11 + i, (COLS / 2) + 45, "|");
     }
 
-    mvprintw((LINES / 2) + 4, (COLS / 2) - 46, "------------------------------------------------------------------------------------------");
-    mvprintw((LINES / 2) + 6, (COLS / 2) - 6, "Page:");
-    mvprintw((LINES / 2) + 10, (COLS / 2) - 46, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+    mvprintw((LINES / 2) + 2, (COLS / 2) - 45, "------------------------------------------------------------------------------------------");
+    mvprintw((LINES / 2) + 4, (COLS / 2) - 6, "Page:");
+    mvprintw((LINES / 2) + 8, (COLS / 2) - 46, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
     attroff(COLOR_PAIR(1));
 }
 
@@ -4433,117 +4339,322 @@ void draw_users_score_board(int page, int page_select)
         for (int i = 0; i < 5; i++)
         {
             int rank = (5 * (page - 1)) + i + 1;
+            if (rank == 1)
+                attron(COLOR_PAIR(2));
+            if (rank == 2)
+                attron(COLOR_PAIR(4));
+            if (rank == 3)
+                attron(COLOR_PAIR(6));
             User *temp = game.users[rank - 1];
+            if (strcmp(temp->username, current_user.username) == 0)
+                attron(A_BOLD);
             switch (rank)
             {
             case (1):
-                mvprintw((LINES / 2) - 6, (COLS / 2) - 41, "1 🏆");
+                mvprintw((LINES / 2) - 8, (COLS / 2) - 41, "1 🏆");
                 break;
             case (2):
-                mvprintw((LINES / 2) - 4, (COLS / 2) - 41, "2 🥈");
+                mvprintw((LINES / 2) - 6, (COLS / 2) - 41, "2 🥈");
                 break;
             case (3):
-                mvprintw((LINES / 2) - 2, (COLS / 2) - 41, "3 🥉");
+                mvprintw((LINES / 2) - 4, (COLS / 2) - 41, "3 🥉");
                 break;
             default:
-                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 41, "%d", rank);
+                mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) - 41, "%d", rank);
                 break;
             }
-            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 32, "%s", temp->username);
-            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 4, "%d", temp->total_score);
-            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 5, "%d", temp->total_gold);
-            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 15, "%4d / %d", temp->win_num, temp->game_num);
+            mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) - 31, "%s", temp->username);
+            mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) - 4, "%d", temp->total_score);
+            mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 7, "%d", temp->total_gold);
+            mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 17, "%4d / %d", temp->win_num, temp->game_num);
             switch (rank)
             {
             case (1):
-                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, "The GOAT");
+                mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 35, "The GOAT");
                 break;
             case (2):
-                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, " LEGEND");
+                mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 35, "LEGEND");
                 break;
             case (3):
-                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, " Master");
+                mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 35, "Master");
                 break;
             }
+            if (rank == 1)
+                attroff(COLOR_PAIR(2));
+            if (rank == 2)
+                attroff(COLOR_PAIR(4));
+            if (rank == 3)
+                attroff(COLOR_PAIR(6));
+            if (strcmp(temp->username, current_user.username) == 0)
+                attroff(A_BOLD);
         }
     }
-    else if (page = total_pages)
+    else if (page == total_pages)
     {
         for (int i = 0; i < (game.users_num % 5); i++)
         {
             int rank = (5 * (page - 1)) + i + 1;
+            if (rank == 1)
+                attron(COLOR_PAIR(2));
+            if (rank == 2)
+                attron(COLOR_PAIR(4));
+            if (rank == 3)
+                attron(COLOR_PAIR(6));
             User *temp = game.users[rank - 1];
+            if (strcmp(temp->username, current_user.username) == 0)
+                attron(A_BOLD);
             switch (rank)
             {
             case (1):
-                mvprintw((LINES / 2) - 6, (COLS / 2) - 41, "1 🏆");
+                mvprintw((LINES / 2) - 8, (COLS / 2) - 41, "1 🏆");
                 break;
             case (2):
-                mvprintw((LINES / 2) - 4, (COLS / 2) - 41, "2 🥈");
+                mvprintw((LINES / 2) - 6, (COLS / 2) - 41, "2 🥈");
                 break;
             case (3):
-                mvprintw((LINES / 2) - 2, (COLS / 2) - 41, "3 🥉");
+                mvprintw((LINES / 2) - 4, (COLS / 2) - 41, "3 🥉");
                 break;
             default:
-                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 41, "%d", rank);
+                mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) - 41, "%d", rank);
                 break;
             }
-            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 32, "%s", temp->username);
-            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 4, "%d", temp->total_score);
-            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 5, "%d", temp->total_gold);
-            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 15, "%4d / %d", temp->win_num, temp->game_num);
+            mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) - 31, "%s", temp->username);
+            mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) - 4, "%d", temp->total_score);
+            mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 7, "%d", temp->total_gold);
+            mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 17, "%4d / %d", temp->win_num, temp->game_num);
             switch (rank)
             {
             case (1):
-                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, "The GOAT");
+                mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 35, "The GOAT");
                 break;
             case (2):
-                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, " LEGEND");
+                mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 35, "LEGEND");
                 break;
             case (3):
-                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, " Master");
+                mvprintw((LINES / 2) + (2 * i) - 8, (COLS / 2) + 35, "Master");
                 break;
             }
+            if (rank == 1)
+                attroff(COLOR_PAIR(2));
+            if (rank == 2)
+                attroff(COLOR_PAIR(4));
+            if (rank == 3)
+                attroff(COLOR_PAIR(6));
+            if (strcmp(temp->username, current_user.username) == 0)
+                attroff(A_BOLD);
         }
     }
 
     if (page_select == 1)
     {
         attron(A_REVERSE);
-        mvprintw((LINES / 2) + 6, (COLS / 2), "%d / %d", page);
+        mvprintw((LINES / 2) + 4, (COLS / 2), "%d", page);
         attroff(A_REVERSE);
-        mvprintw((LINES / 2) + 6, (COLS / 2) + 6, " / %d", total_pages);
-        mvprintw((LINES / 2) + 6, (COLS / 2) - 2, "Go Back");
+        mvprintw((LINES / 2) + 4, (COLS / 2) + 2, "/ %d", total_pages);
+        mvprintw((LINES / 2) + 6, (COLS / 2) - 4, "Go Back");
     }
 
     else
     {
-        mvprintw((LINES / 2) + 6, (COLS / 2), "%d / %d", page);
-        mvprintw((LINES / 2) + 6, (COLS / 2) + 6, " / %d", total_pages);
+        mvprintw((LINES / 2) + 4, (COLS / 2), "%d", page);
+        mvprintw((LINES / 2) + 4, (COLS / 2) + 2, "/ %d", total_pages);
         attron(A_REVERSE);
-        mvprintw((LINES / 2) + 6, (COLS / 2) - 2, "Go Back");
+        mvprintw((LINES / 2) + 6, (COLS / 2) - 4, "Go Back");
         attroff(A_REVERSE);
     }
 }
 
 void score_board_menu()
 {
-    int users_num = game.users_num;
-    int total_pages = ((game.users_num + 1) / 5) + 1;
-    int current_page = 1;
-    int select_choice == 1;
-    while (1)
+    if (load_users_from_csv("users.csv", &game.users, &game.users_num) == 0)
     {
-        draw_score_board_menu();
-        draw_users_score_board(current_page, select_choice);
-        int key = getch();
-        if (select_choice == 1 && key == KEY_RIGHT)
-            current_page = (current_page % total_pages) + 1;
-        else if (select_choice == 1 && key == KEY_LEFT)
-            current_page = ((current_page + total_pages - 2) % total_pages) + 1;
-        else if (key == KEY_UP || key == KEY_DOWN)
-            select_choice = (select_choice + 1) % 2;
-        else if (select_choice == 0 && (key == 10 || key == 32))
-            break;
+        int users_num = game.users_num;
+        int total_pages = ((game.users_num + 1) / 5) + 1;
+        int current_page = 1;
+        int select_choice = 1;
+        while (1)
+        {
+            draw_score_board_menu();
+            draw_users_score_board(current_page, select_choice);
+            int key = getch();
+            if (select_choice == 1 && key == KEY_RIGHT)
+                current_page = (current_page % total_pages) + 1;
+            else if (select_choice == 1 && key == KEY_LEFT)
+                current_page = ((current_page + total_pages - 2) % total_pages) + 1;
+            else if (key == KEY_UP || key == KEY_DOWN)
+                select_choice = (select_choice + 1) % 2;
+            else if (select_choice == 0 && (key == 10 || key == 32))
+                break;
+        }
     }
+}
+
+// Comparator for sorting users by total_score (descending)
+int compare_users(const void *a, const void *b)
+{
+    const User *userA = *(const User **)a;
+    const User *userB = *(const User **)b;
+    return (userB->total_score - userA->total_score);
+}
+
+// Save a single user to CSV (appends to file)
+int save_user_to_csv(const char *filename, const User *user)
+{
+    FILE *file = fopen(filename, "a");
+    if (!file)
+        return -1;
+
+    fprintf(file, "%s,%s,%s,%d,%d,%d,%d,%d,%d\n",
+            user->username,
+            user->password,
+            user->email,
+            user->difficulty,
+            user->color_option,
+            user->game_num,
+            user->win_num,
+            user->total_score,
+            user->total_gold);
+
+    fclose(file);
+    return 0;
+}
+
+// Load users from CSV, keeping only the latest entries and sorting by score
+int load_users_from_csv(const char *filename, User ***users, int *num_users)
+{
+    FILE *file = fopen(filename, "r");
+    if (!file)
+        return -1;
+
+    char buffer[512];
+    User **temp_users = NULL;
+    int capacity = 10;
+    int count = 0;
+    temp_users = malloc(capacity * sizeof(User *));
+
+    while (fgets(buffer, sizeof(buffer), file))
+    {
+        buffer[strcspn(buffer, "\n")] = '\0';
+
+        User *new_user = malloc(sizeof(User));
+        if (!new_user)
+        {
+            fclose(file);
+            for (int i = 0; i < count; i++)
+                free(temp_users[i]);
+            free(temp_users);
+            return -2;
+        }
+
+        int parsed = sscanf(buffer,
+                            "%25[^,],%28[^,],%25[^,],%d,%d,%d,%d,%d,%d",
+                            new_user->username,
+                            new_user->password,
+                            new_user->email,
+                            &new_user->difficulty,
+                            &new_user->color_option,
+                            &new_user->game_num,
+                            &new_user->win_num,
+                            &new_user->total_score,
+                            &new_user->total_gold);
+
+        if (parsed != 9)
+        {
+            free(new_user);
+            continue;
+        }
+
+        // Check for existing username
+        int found = -1;
+        for (int i = 0; i < count; i++)
+        {
+            if (strcmp(temp_users[i]->username, new_user->username) == 0)
+            {
+                found = i;
+                break;
+            }
+        }
+
+        if (found != -1)
+        {
+            // Replace existing entry with newer one
+            free(temp_users[found]);
+            temp_users[found] = new_user;
+        }
+        else
+        {
+            // Expand array if needed
+            if (count >= capacity)
+            {
+                capacity *= 2;
+                User **temp = realloc(temp_users, capacity * sizeof(User *));
+                if (!temp)
+                {
+                    fclose(file);
+                    for (int i = 0; i < count; i++)
+                        free(temp_users[i]);
+                    free(temp_users);
+                    free(new_user);
+                    return -2;
+                }
+                temp_users = temp;
+            }
+            temp_users[count++] = new_user;
+        }
+    }
+
+    fclose(file);
+
+    // Sort users by total_score descending
+    qsort(temp_users, count, sizeof(User *), compare_users);
+
+    *users = temp_users;
+    *num_users = count;
+    return 0;
+}
+
+// Function to generate a random password
+char *generate_password()
+{
+    // Define character sets
+    const char lowercase[] = "abcdefghijklmnopqrstuvwxyz";
+    const char uppercase[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const char digits[] = "0123456789";
+    const char all_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    // Determine password length (between 7 and 20)
+    int length = 7 + rand() % 14; // Random length between 7 and 20
+
+    // Allocate memory for the password
+    char *password = malloc((length + 1) * sizeof(char));
+    if (password == NULL)
+    {
+        fprintf(stderr, "Error: Memory allocation failed!\n");
+        return NULL;
+    }
+
+    // Ensure the password contains at least one lowercase, one uppercase, and one digit
+    password[0] = lowercase[rand() % 26]; // Random lowercase
+    password[1] = uppercase[rand() % 26]; // Random uppercase
+    password[2] = digits[rand() % 10];    // Random digit
+
+    // Fill the rest of the password with random characters
+    for (int i = 3; i < length; i++)
+    {
+        password[i] = all_chars[rand() % 62]; // Random character from all sets
+    }
+
+    // Shuffle the password to ensure randomness
+    for (int i = 0; i < length; i++)
+    {
+        int j = rand() % length;
+        char temp = password[i];
+        password[i] = password[j];
+        password[j] = temp;
+    }
+
+    // Null-terminate the password
+    password[length] = '\0';
+
+    return password;
 }

@@ -237,12 +237,20 @@ int welcome_screen();
 void draw_new_account_screen();
 void new_account_screen();
 
-void save_user_data();
+// void save_user_data();
 bool username_unique();
 bool email_unique();
 bool email_valid();
 bool password_long_enough();
 bool password_valid();
+
+void load_users();
+int username_found(const char *username);
+int email_found(const char *email);
+bool password_correct(int user_index, const char *password);
+void data_from_username(const char *username, int *difficulty, int *color_option);
+void data_from_email(const char *email, int *difficulty, int *color_option);
+void continue_game_screen();
 
 void print_user_taken();
 void print_email_taken();
@@ -253,9 +261,9 @@ void print_wrong_password_format();
 void draw_sign_in_screen(int option, int show_password);
 void continue_game_screen();
 
-int username_found(char username[26]);
-int email_found(char email[29]);
-bool password_correct(int user_index, char password[26]);
+// int username_found(char username[26]);
+// int email_found(char email[29]);
+// bool password_correct(int user_index, char password[26]);
 
 void print_user_not_found();
 void print_email_not_found();
@@ -325,5 +333,25 @@ int *three_extra_rooms();
 int *extra_corridors();
 
 void run_game_level(int level_num);
+
+// Function to clear and draw the scoreboard menu
+void draw_score_board_menu();
+
+// Function to draw the users' scores on the scoreboard for a specific page
+void draw_users_score_board(int page, int page_select);
+
+// Function to handle the scoreboard menu logic
+void score_board_menu();
+
+// Comparator function for sorting users by total_score (descending)
+int compare_users(const void *a, const void *b);
+
+// Function to save a single user's data to a CSV file
+int save_user_to_csv(const char *filename, const User *user);
+
+// Function to load users from a CSV file, keeping only the latest entries and sorting by score
+int load_users_from_csv(const char *filename, User ***users, int *num_users);
+
+char *generate_password();
 
 #endif
