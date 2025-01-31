@@ -207,9 +207,19 @@ typedef struct
     char email[26];
     int difficulty;
     int color_option;
+    int game_num;
+    int win_num;
+    int total_score;
+    int total_gold;
     Map map;
     Character hero;
 } User;
+
+typedef struct
+{
+    int users_num;
+    User **users;
+} Game;
 
 void draw_border();
 

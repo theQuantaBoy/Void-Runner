@@ -12,6 +12,7 @@
 #include "FUNCTIONS_2.h"
 
 Level level[MAX_LEVEL];
+Game game;
 User current_user;
 Character hero;
 bool ***visibility_grid;
@@ -4403,5 +4404,146 @@ void run_game_level(int i)
                 hero.satiety -= 5;
             hero.satiety_progress = 0;
         }
+    }
+}
+
+void draw_score_board_menu()
+{
+    clear();
+    attron(COLOR_PAIR(1));
+    mvprintw((LINES / 2) - 10, (COLS / 2) - 46, "__ Score Board _____________________________________________________________________________");
+    mvprintw((LINES / 2) - 8, (COLS / 2) - 41, "Rank      Champion                   Score      Gold      Wins / Games      Epithet");
+    for (int i = 0; i < 19; i++)
+    {
+        mvprintw((LINES / 2) - 9 + i, (COLS / 2) - 46, "|");
+        mvprintw((LINES / 2) - 9 + i, (COLS / 2) + 45, "|");
+    }
+
+    mvprintw((LINES / 2) + 4, (COLS / 2) - 46, "------------------------------------------------------------------------------------------");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 6, "Page:");
+    mvprintw((LINES / 2) + 10, (COLS / 2) - 46, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+    attroff(COLOR_PAIR(1));
+}
+
+void draw_users_score_board(int page, int page_select)
+{
+    int total_pages = ((game.users_num + 1) / 5) + 1;
+    if (page < total_pages)
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            int rank = (5 * (page - 1)) + i + 1;
+            User *temp = game.users[rank - 1];
+            switch (rank)
+            {
+            case (1):
+                mvprintw((LINES / 2) - 6, (COLS / 2) - 41, "1 🏆");
+                break;
+            case (2):
+                mvprintw((LINES / 2) - 4, (COLS / 2) - 41, "2 🥈");
+                break;
+            case (3):
+                mvprintw((LINES / 2) - 2, (COLS / 2) - 41, "3 🥉");
+                break;
+            default:
+                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 41, "%d", rank);
+                break;
+            }
+            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 32, "%s", temp->username);
+            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 4, "%d", temp->total_score);
+            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 5, "%d", temp->total_gold);
+            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 15, "%4d / %d", temp->win_num, temp->game_num);
+            switch (rank)
+            {
+            case (1):
+                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, "The GOAT");
+                break;
+            case (2):
+                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, " LEGEND");
+                break;
+            case (3):
+                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, " Master");
+                break;
+            }
+        }
+    }
+    else if (page = total_pages)
+    {
+        for (int i = 0; i < (game.users_num % 5); i++)
+        {
+            int rank = (5 * (page - 1)) + i + 1;
+            User *temp = game.users[rank - 1];
+            switch (rank)
+            {
+            case (1):
+                mvprintw((LINES / 2) - 6, (COLS / 2) - 41, "1 🏆");
+                break;
+            case (2):
+                mvprintw((LINES / 2) - 4, (COLS / 2) - 41, "2 🥈");
+                break;
+            case (3):
+                mvprintw((LINES / 2) - 2, (COLS / 2) - 41, "3 🥉");
+                break;
+            default:
+                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 41, "%d", rank);
+                break;
+            }
+            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 32, "%s", temp->username);
+            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) - 4, "%d", temp->total_score);
+            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 5, "%d", temp->total_gold);
+            mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 15, "%4d / %d", temp->win_num, temp->game_num);
+            switch (rank)
+            {
+            case (1):
+                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, "The GOAT");
+                break;
+            case (2):
+                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, " LEGEND");
+                break;
+            case (3):
+                mvprintw((LINES / 2) + (2 * i) - 6, (COLS / 2) + 33, " Master");
+                break;
+            }
+        }
+    }
+
+    if (page_select == 1)
+    {
+        attron(A_REVERSE);
+        mvprintw((LINES / 2) + 6, (COLS / 2), "%d / %d", page);
+        attroff(A_REVERSE);
+        mvprintw((LINES / 2) + 6, (COLS / 2) + 6, " / %d", total_pages);
+        mvprintw((LINES / 2) + 6, (COLS / 2) - 2, "Go Back");
+    }
+
+    else
+    {
+        mvprintw((LINES / 2) + 6, (COLS / 2), "%d / %d", page);
+        mvprintw((LINES / 2) + 6, (COLS / 2) + 6, " / %d", total_pages);
+        attron(A_REVERSE);
+        mvprintw((LINES / 2) + 6, (COLS / 2) - 2, "Go Back");
+        attroff(A_REVERSE);
+    }
+}
+
+void score_board_menu()
+{
+    int users_num = game.users_num;
+    int total_pages = ((game.users_num + 1) / 5) + 1;
+    int current_page = 1;
+    int select_choice == 1;
+    while (1)
+    {
+        draw_score_board_menu();
+        draw_users_score_board(current_page, select_choice);
+        int key = getch();
+        if (select_choice == 1 && key == KEY_RIGHT)
+            current_page = (current_page % total_pages) + 1;
+        else if (select_choice == 1 && key == KEY_LEFT)
+            current_page = ((current_page + total_pages - 2) % total_pages) + 1;
+        else if (key == KEY_UP || key == KEY_DOWN)
+            select_choice = (select_choice + 1) % 2;
+        else if (select_choice == 0 && (key == 10 || key == 32))
+            break;
     }
 }
