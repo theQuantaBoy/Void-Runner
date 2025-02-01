@@ -3,8 +3,8 @@
 
 // #include "STRUCTS.h"
 
-#define UP_MARGIN 3
-#define DOWN_MARGIN 7
+#define UP_MARGIN 6
+#define DOWN_MARGIN 6
 #define MAX_ROOM_NUM 6
 #define MIN_ROOM_WIDTH 6
 #define MIN_ROOM_LENGTH 8
@@ -50,19 +50,6 @@
 
 #define MAX_DAMAGE_SPELL 1
 #define MIN_DAMAGE_SPELL 0
-
-// #define SAFE_APPEND(dest, src, remaining)                   \
-//     do                                                      \
-//     {                                                       \
-//         int written = snprintf(dest, remaining, "%s", src); \
-//         if (written < 0 || (size_t)written >= remaining)    \
-//         {                                                   \
-//             fprintf(stderr, "Buffer overflow detected\n");  \
-//             exit(EXIT_FAILURE);                             \
-//         }                                                   \
-//         dest += written;                                    \
-//         remaining -= written;                               \
-//     } while (0)
 
 const char *welcome_options[4] = {"Log In", "Create New Account", "Play as Guest", "Quit"};
 const char *new_account_options[3] = {"Username: ", "Email: ", "Password: "};
@@ -222,6 +209,9 @@ typedef struct
     int food_num;
     int weapon_num;
     int spell_num;
+
+    Object current_weapon;
+    int currect_weapon_num;
 } Character;
 
 typedef struct
@@ -244,6 +234,23 @@ typedef struct
     int users_num;
     User **users;
 } Game;
+
+const char *undertale[] = {
+    "music/track1.mp3",
+    "music/track2.mp3",
+    "music/track3.mp3",
+    NULL};
+
+const char *squid_game[] = {
+    "music/track4.mp3",
+    "music/track5.mp3",
+    NULL};
+
+const char *taylor_swift[] = {
+    "test/music/Coldplay-FixYou.mp3",
+    NULL};
+
+const char **playlists[] = {undertale, squid_game, taylor_swift};
 
 void draw_border();
 
@@ -389,5 +396,15 @@ int valid_point_enemy(int level_num, Point destination);
 
 Point random_location_enemy(int level_num);
 void draw_message_border();
+
+void play_playlist(const char **playlist);
+void draw_inventory_border();
+void draw_info_border();
+
+void remove_enemy(int level_num, int enemy_index);
+
+void remove_food_from_inventory(int food_index);
+void remove_weapon_from_inventory(int weapon_index);
+void remove_spell_from_inventory(int spell_index);
 
 #endif
