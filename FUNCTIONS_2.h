@@ -131,6 +131,27 @@ typedef struct
     int location_room;
 } Object;
 
+typedef enum
+{
+    deamon = 0,
+    fire_monster,
+    giant,
+    snake,
+    undead
+} EnemyType;
+
+typedef struct
+{
+    Point location;
+    int health;
+    int damage;
+    int speed;
+    int follow;
+    int visible;
+    int location_room;
+    EnemyType type;
+} Enemy;
+
 typedef struct
 {
     int level_num;
@@ -146,6 +167,9 @@ typedef struct
 
     Object *objects;
     int object_num;
+
+    Enemy *enemies;
+    int enemy_num;
 } Level;
 
 typedef struct
@@ -175,24 +199,6 @@ typedef enum
     Snake,
     Monkey
 } face_options;
-
-typedef enum
-{
-    deamon,
-    fire_monster,
-    giant,
-    snake,
-    undead
-} EnemyType;
-
-typedef struct
-{
-    Point location;
-    int health;
-    int damage;
-    EnemyType type;
-    int speed_counter;
-} Enemy;
 
 typedef struct
 {
@@ -372,5 +378,16 @@ int load_users_from_csv(const char *filename, User ***users, int *num_users);
 
 char *generate_password();
 void golden_freddy_appear();
+
+void create_enemies(int level_num);
+void print_enemies(int level_num);
+
+void make_enemies_visible(int level_num);
+void handle_enemies_movement(int level_num);
+int in_range(Point p1, Point p2, int distance);
+int valid_point_enemy(int level_num, Point destination);
+
+Point random_location_enemy(int level_num);
+void draw_message_border();
 
 #endif

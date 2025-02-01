@@ -20,6 +20,7 @@ short int ***map;
 int get_input = 1;
 int added_coin = 0;
 int object_index = -1;
+int enemy_index = -1;
 
 int main()
 {
@@ -217,6 +218,7 @@ void random_map()
         random_level(i);
         create_corridors(i);
         create_objects(i);
+        create_enemies(i);
         level[i].level_num = i;
         level_to_file("test.csv", i);
     }
@@ -1489,6 +1491,14 @@ int valid_point(int level_num, Point destination)
     int y = destination.y;
     int x = destination.x;
 
+    for (int i = 0; i < level[level_num].enemy_num; i++)
+    {
+        if ((y == level[level_num].enemies[i].location.y && x == level[level_num].enemies[i].location.x) ||
+            (y == level[level_num].enemies[i].location.y && x == level[level_num].enemies[i].location.x + 1) ||
+            (y == level[level_num].enemies[i].location.y && x == level[level_num].enemies[i].location.x - 1))
+            return 0;
+    }
+
     for (int i = 0; i < 9; i++)
     {
         Room temp = level[level_num].room[i];
@@ -1839,7 +1849,7 @@ Point random_location(int level_num)
             result.y = room.corner.y + 1;
             result.x = room.corner.x;
 
-            result.y += (rand() % ((room.width - 2) / 2) * 2) + 1;
+            result.y += (rand() % (room.width - 2) / 2) + 1;
             result.x += (rand() % ((room.length - 2) / 2) * 2) + 1;
 
             if (map[level_num][result.y][result.x] == 0 && map[level_num][result.y][result.x + 2] == 0)
@@ -1882,110 +1892,183 @@ int handle_location(int level_num)
         {
             level[level_num].objects[i].visible = 0;
             object_index = i;
-            // break;
+        }
+    }
+
+    for (int i = 0; i < level[level_num].object_num; i++)
+    {
+        for (int j = 0; j < level[level_num].enemy_num; j++)
+        {
+            y = level[level_num].enemies[j].location.y;
+            x = level[level_num].enemies[j].location.x;
+            if ((level[level_num].objects[i].location.y == y && level[level_num].objects[i].location.x == x) ||
+                (level[level_num].objects[i].location.y == y && level[level_num].objects[i].location.x + 1 == x) ||
+                (level[level_num].objects[i].location.y == y && level[level_num].objects[i].location.x - 1 == x))
+            {
+                level[level_num].objects[i].visible = 0;
+            }
+        }
+    }
+
+    y = hero.location.y;
+    x = hero.location.x;
+
+    for (int i = 0; i < level[level_num].enemy_num; i++)
+    {
+        if ((level[level_num].enemies[i].location.y == y && level[level_num].enemies[i].location.x == x) ||
+            (level[level_num].enemies[i].location.y == y && level[level_num].enemies[i].location.x + 1 == x) ||
+            (level[level_num].enemies[i].location.y == y && level[level_num].enemies[i].location.x - 1 == x))
+        {
+            level[level_num].enemies[i].visible = 0;
         }
     }
 
     if (object_index == -1)
-        return -1;
-
-    switch (level[level_num].objects[object_index].type)
     {
-    case (Trap):
-    {
-        hero.health -= 20;
-        int room_num;
-        while (1)
+        for (int i = 0; i < level[level_num].enemy_num; i++)
         {
-            room_num = rand() % 9;
-            if (level[level_num].room[room_num].room_exist == 1)
-                break;
+            if ((level[level_num].enemies[i].location.y == y && level[level_num].enemies[i].location.x - 2 == x) ||
+                (level[level_num].enemies[i].location.y == y && level[level_num].enemies[i].location.x + 2 == x) ||
+                (level[level_num].enemies[i].location.y - 1 == y && level[level_num].enemies[i].location.x == x) ||
+                (level[level_num].enemies[i].location.y - 1 == y && level[level_num].enemies[i].location.x - 1 == x) ||
+                (level[level_num].enemies[i].location.y + 1 == y && level[level_num].enemies[i].location.x == x) ||
+                (level[level_num].enemies[i].location.y + 1 == y && level[level_num].enemies[i].location.x - 1 == x))
+            {
+                enemy_index = i;
+            }
         }
+    }
 
-        remove_object(level_num, object_index);
-        break;
-    }
-    case (NormalFood):
-    {
-        return 5;
-        break;
-    }
-    case (GourmetFood):
-    {
-        return 6;
-        break;
-    }
-    case (MagicFood):
-    {
-        return 7;
-        break;
-    }
-    case (PoisonFood):
-    {
-        return 2;
-        break;
-    }
-    case (Coin):
-    {
-        added_coin = (rand() % (MAX_COIN_POINT - MIN_COIN_POINT + 1)) + MIN_COIN_POINT;
-        hero.coins += added_coin;
-        remove_object(level_num, object_index);
-        return 3;
-        break;
-    }
-    case (Dagger):
-    {
-        return 8;
-        break;
-    }
-    case (MagicWand):
-    {
-        return 9;
-        break;
-    }
-    case (NormalArrow):
-    {
-        return 10;
-        break;
-    }
-    case (Sword):
-    {
-        return 11;
-        break;
-    }
-    case (BlackCoin):
-    {
-        added_coin = 30;
-        hero.coins += added_coin;
-        remove_object(level_num, object_index);
-        return 12;
-        break;
-    }
-    case (HealthSpell):
-    {
-        return 13;
-        break;
-    }
-    case (SpeedSpell):
-    {
-        return 14;
-        break;
-    }
-    case (DamageSpell):
-    {
-        return 15;
-        break;
-    }
-    case (Staircase):
-    {
-        return 1;
-        break;
-    }
-    default:
-    {
+    if (object_index == -1 && enemy_index == -1)
         return -1;
-        break;
+
+    else if (enemy_index != -1 && object_index == -1)
+    {
+        if (hero.health >= level[level_num].enemies[enemy_index].damage)
+            hero.health -= level[level_num].enemies[enemy_index].damage;
+        else
+            hero.health = 0;
+
+        switch (level[level_num].enemies[enemy_index].type)
+        {
+        case (deamon):
+            return 20;
+            break;
+        case (fire_monster):
+            return 21;
+            break;
+        case (giant):
+            return 22;
+            break;
+        case (snake):
+            return 23;
+            break;
+        case (undead):
+            return 24;
+            break;
+        }
     }
+
+    else if (enemy_index == -1 && object_index != -1)
+    {
+        switch (level[level_num].objects[object_index].type)
+        {
+        case (Trap):
+        {
+            hero.health -= 20;
+            int room_num;
+            while (1)
+            {
+                room_num = rand() % 9;
+                if (level[level_num].room[room_num].room_exist == 1)
+                    break;
+            }
+
+            remove_object(level_num, object_index);
+            break;
+        }
+        case (NormalFood):
+        {
+            return 5;
+            break;
+        }
+        case (GourmetFood):
+        {
+            return 6;
+            break;
+        }
+        case (MagicFood):
+        {
+            return 7;
+            break;
+        }
+        case (PoisonFood):
+        {
+            return 2;
+            break;
+        }
+        case (Coin):
+        {
+            added_coin = (rand() % (MAX_COIN_POINT - MIN_COIN_POINT + 1)) + MIN_COIN_POINT;
+            hero.coins += added_coin;
+            remove_object(level_num, object_index);
+            return 3;
+            break;
+        }
+        case (Dagger):
+        {
+            return 8;
+            break;
+        }
+        case (MagicWand):
+        {
+            return 9;
+            break;
+        }
+        case (NormalArrow):
+        {
+            return 10;
+            break;
+        }
+        case (Sword):
+        {
+            return 11;
+            break;
+        }
+        case (BlackCoin):
+        {
+            added_coin = 30;
+            hero.coins += added_coin;
+            remove_object(level_num, object_index);
+            return 12;
+            break;
+        }
+        case (HealthSpell):
+        {
+            return 13;
+            break;
+        }
+        case (SpeedSpell):
+        {
+            return 14;
+            break;
+        }
+        case (DamageSpell):
+        {
+            return 15;
+            break;
+        }
+        case (Staircase):
+        {
+            return 1;
+            break;
+        }
+        default:
+        {
+            return -1;
+            break;
+        }
+        }
     }
 }
 
@@ -2027,9 +2110,24 @@ void print_info(int level_num)
     mvprintw(LINES - 2, 4 * (COLS / 5) - 5, "Stars: %d", hero.coins);
 }
 
+void draw_message_border()
+{
+    mvprintw(LINES - 5, 3, "__ Message ");
+    for (int i = 14; i < COLS - 4; i++)
+        mvprintw(LINES - 5, i, "_");
+    for (int i = 0; i < 3; i++)
+    {
+        mvprintw(LINES - 4 + i, 3, "|");
+        mvprintw(LINES - 4 + i, COLS - 5, "|");
+    }
+    for (int i = 3; i < COLS - 4; i++)
+        mvprintw(LINES - 1, i, "‾");
+}
+
 void print_message(char *message, char *guide)
 {
-    mvprintw(2, MARGIN + 5, "%s ", message);
+    draw_message_border();
+    mvprintw(LINES - 3, 8, "%s ", message);
     attron(A_REVERSE);
     printw("%s", guide);
     attroff(A_REVERSE);
@@ -2081,7 +2179,7 @@ void show_food_inventory()
 {
     move(1, 0);
     clrtoeol();
-    move(2, 0);
+    move(LINES - 5, 0);
     clrtoeol();
     move(3, 0);
     clrtoeol();
@@ -2127,7 +2225,7 @@ void show_weapon_inventory()
 {
     move(1, 0);
     clrtoeol();
-    move(2, 0);
+    move(LINES - 5, 0);
     clrtoeol();
     move(3, 0);
     clrtoeol();
@@ -2181,7 +2279,7 @@ void show_spell_inventory()
 {
     move(1, 0);
     clrtoeol();
-    move(2, 0);
+    move(LINES - 5, 0);
     clrtoeol();
     move(3, 0);
     clrtoeol();
@@ -3883,16 +3981,18 @@ void run_game_level(int i)
         get_input = 1;
         int location_result = -1;
         object_index = -1;
+        enemy_index = -1;
 
         clear();
-        clear();
         make_cells_visible(i);
+        make_enemies_visible(i);
         location_result = handle_location(i);
         print_level(i);
         print_corridors(i);
         print_objects(i);
+        print_enemies(i);
         print_hero();
-        print_info(i);
+        // print_info(i);
 
         int input;
 
@@ -3904,7 +4004,7 @@ void run_game_level(int i)
                 input = getch();
                 if (input == ' ')
                 {
-                    move(2, 0);
+                    move(LINES - 5, 0);
                     clrtoeol();
                     refresh();
                     break;
@@ -3926,7 +4026,7 @@ void run_game_level(int i)
         //         input = getch();
         //         if (input == ' ')
         //         {
-        //             move(2, 0);
+        //             move (LINES - 5, 0);
         //             clrtoeol();
         //             refresh();
         //             break;
@@ -3940,7 +4040,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '1' to see your Food Inventory.", "");
@@ -3948,14 +4048,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.food_inventory[hero.food_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.food_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -3969,7 +4069,7 @@ void run_game_level(int i)
             print_message(message, "");
             input = getch();
             get_input = 0;
-            move(2, 0);
+            move(LINES - 5, 0);
             clrtoeol();
             refresh();
         }
@@ -3981,7 +4081,7 @@ void run_game_level(int i)
             print_message(message, "");
             input = getch();
             get_input = 0;
-            move(2, 0);
+            move(LINES - 5, 0);
             clrtoeol();
             refresh();
         }
@@ -3992,7 +4092,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '1' to see your Food Inventory.", "");
@@ -4000,14 +4100,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.food_inventory[hero.food_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.food_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4020,7 +4120,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '1' to see your Food Inventory.", "");
@@ -4028,14 +4128,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.food_inventory[hero.food_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.food_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4048,7 +4148,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '1' to see your Food Inventory.", "");
@@ -4056,14 +4156,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.food_inventory[hero.food_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.food_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4076,7 +4176,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '2' to see your Weapon Inventory.", "");
@@ -4084,14 +4184,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.weapon_inventory[hero.weapon_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.weapon_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4104,7 +4204,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '2' to see your Weapon Inventory.", "");
@@ -4112,14 +4212,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.weapon_inventory[hero.weapon_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.weapon_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4132,7 +4232,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '2' to see your Weapon Inventory.", "");
@@ -4140,14 +4240,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.weapon_inventory[hero.weapon_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.weapon_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4160,7 +4260,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '2' to see your Weapon Inventory.", "");
@@ -4168,14 +4268,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.weapon_inventory[hero.weapon_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.weapon_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4188,7 +4288,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '3' to see your Spell Inventory.", "");
@@ -4196,14 +4296,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.spell_inventory[hero.spell_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.spell_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4216,7 +4316,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '3' to see your Spell Inventory.", "");
@@ -4224,14 +4324,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.spell_inventory[hero.spell_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.spell_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4244,7 +4344,7 @@ void run_game_level(int i)
             input = getch();
             if (input == 'p' || input == 'P')
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 print_message("You can press '3' to see your Spell Inventory.", "");
@@ -4252,14 +4352,14 @@ void run_game_level(int i)
                 get_input = 0;
                 hero.spell_inventory[hero.spell_num] = level[i].objects[object_index];
                 remove_object(i, object_index);
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 hero.spell_num += 1;
             }
             else
             {
-                move(2, 0);
+                move(LINES - 5, 0);
                 clrtoeol();
                 refresh();
                 get_input = 0;
@@ -4290,7 +4390,7 @@ void run_game_level(int i)
             print_entire_map(i);
         }
 
-        usleep(2000 / hero.speed);
+        // usleep(2000 / hero.speed);
 
         if (hero.satiety >= 80)
             hero.health_progress += 1;
@@ -4310,6 +4410,8 @@ void run_game_level(int i)
                 hero.satiety -= 5;
             hero.satiety_progress = 0;
         }
+
+        handle_enemies_movement(i);
     }
 }
 
@@ -4669,4 +4771,547 @@ void golden_freddy_appear()
     refresh();
     usleep(270000);
     clear();
+}
+
+void create_enemies(int level_num)
+{
+    int enemy_count = (rand() % 2) + level_num + 4;
+    level[level_num].enemies = (Enemy *)malloc(enemy_count * sizeof(Enemy));
+
+    for (int i = 0; i < enemy_count; i++)
+    {
+        level[level_num].enemies[i].location = random_location_enemy(level_num);
+        level[level_num].enemies[i].type = rand() % 5;
+        level[level_num].enemies[i].visible = 0;
+        level[level_num].enemies[i].location_room = find_room(level_num, level[level_num].enemies[i].location);
+        map[level_num][level[level_num].enemies[i].location.y][level[level_num].enemies[i].location.x] = level[level_num].enemies[i].type + 22;
+        switch (level[level_num].enemies->type)
+        {
+        case (deamon):
+            level[level_num].enemies[i].health = 5;
+            level[level_num].enemies[i].damage = 3;
+            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].follow = 0;
+            break;
+        case (fire_monster):
+            level[level_num].enemies[i].health = 10;
+            level[level_num].enemies[i].damage = 7;
+            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].follow = 0;
+            break;
+        case (giant):
+            level[level_num].enemies[i].health = 15;
+            level[level_num].enemies[i].damage = 10;
+            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].follow = 1;
+            break;
+        case (snake):
+            level[level_num].enemies[i].health = 20;
+            level[level_num].enemies[i].damage = 15;
+            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].follow = 1;
+            break;
+        case (undead):
+            level[level_num].enemies[i].health = 30;
+            level[level_num].enemies[i].damage = 20;
+            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].follow = 1;
+            break;
+        }
+        map[level_num][level[level_num].enemies[i].location.y][level[level_num].enemies[i].location.x] = 99;
+    }
+
+    level[level_num].enemy_num = enemy_count;
+}
+
+void print_enemies(int level_num)
+{
+    for (int i = 0; i < level[level_num].enemy_num; i++)
+    {
+        if (visibility_grid[level_num][level[level_num].enemies[i].location.y][level[level_num].enemies[i].location.x] == 1 &&
+            visibility_grid[level_num][level[level_num].enemies[i].location.y][level[level_num].enemies[i].location.x + 1] == 1 &&
+            level[level_num].enemies[i].visible == 1)
+        {
+            switch (level[level_num].enemies[i].type)
+            {
+            case (deamon):
+                mvprintw(level[level_num].enemies[i].location.y, level[level_num].enemies[i].location.x, "👹");
+                break;
+            case (fire_monster):
+                mvprintw(level[level_num].enemies[i].location.y, level[level_num].enemies[i].location.x, "🐲");
+                break;
+            case (giant):
+                mvprintw(level[level_num].enemies[i].location.y, level[level_num].enemies[i].location.x, "🗿");
+                break;
+            case (snake):
+                mvprintw(level[level_num].enemies[i].location.y, level[level_num].enemies[i].location.x, "🐍");
+                break;
+            case (undead):
+                mvprintw(level[level_num].enemies[i].location.y, level[level_num].enemies[i].location.x, "🧟");
+                break;
+            }
+        }
+    }
+}
+
+void make_enemies_visible(int level_num)
+{
+    int hero_room = find_room(level_num, hero.location);
+    for (int i = 0; i < level[level_num].enemy_num; i++)
+    {
+        if (find_room(level_num, level[level_num].enemies[i].location) == hero_room && hero_room != -1)
+            level[level_num].enemies[i].visible = 1;
+        else
+            level[level_num].enemies[i].visible = 0;
+    }
+}
+
+void handle_enemies_movement(int level_num)
+{
+    int hero_room = find_room(level_num, hero.location);
+    for (int i = 0; i < level[level_num].enemy_num; i++)
+    {
+        int moved = 0;
+        if (level[level_num].enemies[i].visible == 1 &&
+            visibility_grid[level_num][level[level_num].enemies[i].location.y][level[level_num].enemies[i].location.x] == 1 &&
+            visibility_grid[level_num][level[level_num].enemies[i].location.y][level[level_num].enemies[i].location.x + 1] == 1 &&
+            level[level_num].enemies[i].location_room == hero_room)
+        {
+            switch (level[level_num].enemies[i].type)
+            {
+            case (fire_monster):
+                if (level[level_num].enemies[i].speed == 1 && in_range(hero.location, level[level_num].enemies[i].location, 3))
+                {
+                    int y = rand() % 2;
+                    if (y == 1)
+                    {
+                        if (moved == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
+                        {
+                            Point destination;
+                            destination.y = level[level_num].enemies[i].location.y + 1;
+                            destination.x = level[level_num].enemies[i].location.x;
+                            if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                            {
+                                level[level_num].enemies[i].location.y += 1;
+                                moved = 1;
+                            }
+                        }
+
+                        if (moved == 0 && level[level_num].enemies[i].location.y - 1 > hero.location.y)
+                        {
+                            Point destination;
+                            destination.y = level[level_num].enemies[i].location.y - 1;
+                            destination.x = level[level_num].enemies[i].location.x;
+                            if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                            {
+                                level[level_num].enemies[i].location.y -= 1;
+                                moved = 1;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (moved == 0 && level[level_num].enemies[i].location.x + 2 < hero.location.x)
+                        {
+                            Point destination;
+                            destination.y = level[level_num].enemies[i].location.y;
+                            destination.x = level[level_num].enemies[i].location.x + 1;
+                            if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                            {
+                                level[level_num].enemies[i].location.x += 1;
+                                moved = 1;
+                            }
+                        }
+
+                        if (moved == 0 && level[level_num].enemies[i].location.x - 2 > hero.location.x)
+                        {
+                            Point destination;
+                            destination.y = level[level_num].enemies[i].location.y;
+                            destination.x = level[level_num].enemies[i].location.x - 1;
+                            if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                            {
+                                level[level_num].enemies[i].location.x -= 1;
+                                moved = 1;
+                            }
+                        }
+                    }
+                }
+                break;
+            case (giant):
+                if (level[level_num].enemies[i].speed == 1 && in_range(hero.location, level[level_num].enemies[i].location, 3))
+                {
+                    if (moved == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y + 1;
+                        destination.x = level[level_num].enemies[i].location.x;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.y += 1;
+                            moved = 1;
+                        }
+                    }
+
+                    if (moved == 0 && level[level_num].enemies[i].location.y - 1 > hero.location.y)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y - 1;
+                        destination.x = level[level_num].enemies[i].location.x;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.y -= 1;
+                            moved = 1;
+                        }
+                    }
+
+                    moved = 0;
+                    if (moved == 0 && level[level_num].enemies[i].location.x + 2 < hero.location.x)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y;
+                        destination.x = level[level_num].enemies[i].location.x + 1;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.x += 1;
+                            moved = 1;
+                        }
+                    }
+
+                    if (moved == 0 && level[level_num].enemies[i].location.x - 2 > hero.location.x)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y;
+                        destination.x = level[level_num].enemies[i].location.x - 1;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.x -= 1;
+                            moved = 1;
+                        }
+                    }
+                }
+                break;
+            case (snake):
+                if (moved == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y + 1;
+                    destination.x = level[level_num].enemies[i].location.x;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.y += 1;
+                        moved = 1;
+                    }
+                }
+
+                if (moved == 0 && level[level_num].enemies[i].location.y - 1 > hero.location.y)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y - 1;
+                    destination.x = level[level_num].enemies[i].location.x;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.y -= 1;
+                        moved = 1;
+                    }
+                }
+
+                moved = 0;
+                if (moved == 0 && level[level_num].enemies[i].location.x + 2 < hero.location.x)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y;
+                    destination.x = level[level_num].enemies[i].location.x + 1;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.x += 1;
+                        moved = 1;
+                    }
+                }
+
+                if (moved == 0 && level[level_num].enemies[i].location.x - 2 > hero.location.x)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y;
+                    destination.x = level[level_num].enemies[i].location.x - 1;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.x -= 1;
+                        moved = 1;
+                    }
+                }
+                break;
+            case (undead):
+                if (level[level_num].enemies[i].speed == 1)
+                {
+                    if (moved == 0 && level[level_num].enemies[i].location.y + 2 < hero.location.y)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y + 2;
+                        destination.x = level[level_num].enemies[i].location.x;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.y += 2;
+                            moved = 1;
+                        }
+                    }
+
+                    if (moved == 0 && level[level_num].enemies[i].location.y - 2 > hero.location.y)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y - 2;
+                        destination.x = level[level_num].enemies[i].location.x;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.y -= 2;
+                            moved = 1;
+                        }
+                    }
+
+                    if (moved == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y + 1;
+                        destination.x = level[level_num].enemies[i].location.x;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.y += 1;
+                            moved = 1;
+                        }
+                    }
+
+                    if (moved == 0 && level[level_num].enemies[i].location.y - 1 > hero.location.y)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y - 1;
+                        destination.x = level[level_num].enemies[i].location.x;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.y -= 1;
+                            moved = 1;
+                        }
+                    }
+
+                    moved = 0;
+                    if (moved == 0 && level[level_num].enemies[i].location.x + 3 < hero.location.x)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y;
+                        destination.x = level[level_num].enemies[i].location.x + 1;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.x += 2;
+                            moved = 1;
+                        }
+                    }
+
+                    if (moved == 0 && level[level_num].enemies[i].location.x - 3 > hero.location.x)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y;
+                        destination.x = level[level_num].enemies[i].location.x - 2;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.x -= 2;
+                            moved = 1;
+                        }
+                    }
+
+                    if (moved == 0 && level[level_num].enemies[i].location.x + 2 < hero.location.x)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y;
+                        destination.x = level[level_num].enemies[i].location.x + 1;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.x += 1;
+                            moved = 1;
+                        }
+                    }
+
+                    if (moved == 0 && level[level_num].enemies[i].location.x - 2 > hero.location.x)
+                    {
+                        Point destination;
+                        destination.y = level[level_num].enemies[i].location.y;
+                        destination.x = level[level_num].enemies[i].location.x - 1;
+                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                        {
+                            level[level_num].enemies[i].location.x -= 1;
+                            moved = 1;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        level[level_num].enemies[i].speed = !level[level_num].enemies[i].speed;
+    }
+}
+
+int in_range(Point p1, Point p2, int distance)
+{
+    int dx = p1.x - p2.x;
+    if (dx < 0)
+        dx *= -1;
+
+    int dy = p1.y - p2.y;
+    if (dy < 0)
+        dy *= -1;
+
+    if (dx + dy <= distance)
+        return 1;
+    return 0;
+}
+
+Point random_location_enemy(int level_num)
+{
+    Point result;
+    int first_room;
+
+    while (1)
+    {
+        first_room = rand() % 9;
+        if (level[level_num].room[first_room].room_exist == 1)
+        {
+            Room room = level[level_num].room[first_room];
+
+            result.y = room.corner.y + 1;
+            result.x = room.corner.x;
+
+            result.y += (rand() % (room.width - 2)) + 1;
+            result.x += (rand() % ((room.length - 6) / 2) * 2) + 2;
+
+            if (map[level_num][result.y][result.x] == 0 && map[level_num][result.y][result.x + 2] == 0)
+                return result;
+        }
+    }
+}
+
+int valid_point_enemy(int level_num, Point destination)
+{
+    int y = destination.y;
+    int x = destination.x;
+
+    for (int i = 0; i < level[level_num].object_num; i++)
+    {
+        if ((y == level[level_num].objects[i].location.y && x == level[level_num].objects[i].location.x) ||
+            (y == level[level_num].objects[i].location.y && x == level[level_num].objects[i].location.x - 1) ||
+            (y == level[level_num].objects[i].location.y && x == level[level_num].objects[i].location.x + 1))
+            return 0;
+    }
+
+    if ((y == hero.location.y && x == hero.location.x) ||
+        (y == hero.location.y && x == hero.location.x - 1) ||
+        (y == hero.location.y && x == hero.location.x + 1))
+        return 0;
+
+    for (int i = 0; i < 9; i++)
+    {
+        Room temp = level[level_num].room[i];
+        if (temp.room_exist == 1)
+        {
+            if (y > temp.corner.y + 1 && y < temp.corner.y + temp.width && x > temp.corner.x + 1 && x < temp.corner.x + temp.length - 3)
+                return 1;
+        }
+    }
+
+    for (int i = 0; i < 12; i++)
+    {
+        if (level[level_num].corridor_exist[i] == 1)
+        {
+            Point door_1, door_2, mid_1, mid_2;
+
+            mid_1 = level[level_num].between_doors_1[i];
+            mid_2 = level[level_num].between_doors_2[i];
+
+            switch (i)
+            {
+            case (0):
+                door_1 = level[level_num].room[0].door[0];
+                door_2 = level[level_num].room[1].door[0];
+                break;
+            case (1):
+                door_1 = level[level_num].room[1].door[1];
+                door_2 = level[level_num].room[2].door[0];
+                break;
+            case (2):
+                door_1 = level[level_num].room[0].door[1];
+                door_2 = level[level_num].room[3].door[0];
+                break;
+            case (3):
+                door_1 = level[level_num].room[1].door[2];
+                door_2 = level[level_num].room[4].door[0];
+                break;
+            case (4):
+                door_1 = level[level_num].room[2].door[1];
+                door_2 = level[level_num].room[5].door[0];
+                break;
+            case (5):
+                door_1 = level[level_num].room[3].door[1];
+                door_2 = level[level_num].room[4].door[1];
+                break;
+            case (6):
+                door_1 = level[level_num].room[4].door[2];
+                door_2 = level[level_num].room[5].door[1];
+                break;
+            case (7):
+                door_1 = level[level_num].room[3].door[2];
+                door_2 = level[level_num].room[6].door[0];
+                break;
+            case (8):
+                door_1 = level[level_num].room[4].door[3];
+                door_2 = level[level_num].room[7].door[0];
+                break;
+            case (9):
+                door_1 = level[level_num].room[5].door[2];
+                door_2 = level[level_num].room[8].door[0];
+                break;
+            case (10):
+                door_1 = level[level_num].room[6].door[1];
+                door_2 = level[level_num].room[7].door[1];
+                break;
+            case (11):
+                door_1 = level[level_num].room[7].door[2];
+                door_2 = level[level_num].room[8].door[1];
+                break;
+            }
+
+            if (i == 0 || i == 1 || i == 5 || i == 6 || i == 10 || i == 11)
+            {
+                if (y == door_1.y && x > door_1.x - 1 && x <= mid_1.x)
+                    return 1;
+                if (mid_1.y < mid_2.y)
+                {
+                    if (x == mid_1.x && y >= mid_1.y && y <= mid_2.y)
+                        return 1;
+                }
+                else
+                {
+                    if (x == mid_1.x && y >= mid_2.y && y <= mid_1.y)
+                        return 1;
+                }
+                if (y == mid_2.y && x >= mid_2.x && x < door_2.x)
+                    return 1;
+            }
+            else
+            {
+                if (x == door_1.x && y > door_1.y && y <= mid_1.y)
+                    return 1;
+                if (mid_1.x < mid_2.x)
+                {
+                    if (y == mid_1.y && x >= mid_1.x && x <= mid_2.x)
+                        return 1;
+                }
+                else
+                {
+                    if (y == mid_1.y && x >= mid_2.x && x <= mid_1.x)
+                        return 1;
+                }
+                if (x == mid_2.x && y >= mid_2.y && y < door_2.y)
+                    return 1;
+            }
+        }
+    }
+
+    return 0;
 }
