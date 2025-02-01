@@ -176,6 +176,24 @@ typedef enum
     Monkey
 } face_options;
 
+typedef enum
+{
+    deamon,
+    fire_monster,
+    giant,
+    snake,
+    undead
+} EnemyType;
+
+typedef struct
+{
+    Point location;
+    int health;
+    int damage;
+    EnemyType type;
+    int speed_counter;
+} Enemy;
+
 typedef struct
 {
     Point location;
@@ -353,5 +371,6 @@ int save_user_to_csv(const char *filename, const User *user);
 int load_users_from_csv(const char *filename, User ***users, int *num_users);
 
 char *generate_password();
+void golden_freddy_appear();
 
 #endif

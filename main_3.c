@@ -107,6 +107,7 @@ int main()
 
                 if (user_option_choice == 3) // My Profile
                 {
+                    golden_freddy_appear();
                 }
 
                 if (user_option_choice == 4)
@@ -2981,17 +2982,16 @@ void title_screen()
     char game_start[] = "- Press any key to continue -";
     int sleep_time = 30000;
 
-    for (int i = 0; i < 23; i++)
+    for (int i = 0; i < 33; i++)
     {
-        move((LINES / 2) - 15 + i, (COLS / 2) - 51);
-        printw("%s", game_title_design_3[i]);
+        mvprintw((LINES / 2) - 19 + i, (COLS / 2) - 61, "%s", game_title_design_5[i]);
         refresh();
         usleep(sleep_time);
     }
 
     usleep(700000);
 
-    move((LINES / 2) + 15, ((COLS - strlen(game_start)) / 2) - 1);
+    move((LINES / 2) + 19, ((COLS - strlen(game_start)) / 2) - 1);
     printw("%s", game_start);
     refresh();
 
@@ -4657,4 +4657,16 @@ char *generate_password()
     password[length] = '\0';
 
     return password;
+}
+
+void golden_freddy_appear()
+{
+    clear();
+    attron(COLOR_PAIR(7));
+    for (int i = 0; i < 58; i++)
+        mvprintw((LINES / 2) - 29 + i, (COLS / 2) - 65, "%s", golden_freddy[i]);
+    attroff(COLOR_PAIR(7));
+    refresh();
+    usleep(270000);
+    clear();
 }
