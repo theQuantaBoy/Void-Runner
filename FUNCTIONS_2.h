@@ -1,8 +1,6 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
-// #include "STRUCTS.h"
-
 #define UP_MARGIN 6
 #define DOWN_MARGIN 6
 #define MAX_ROOM_NUM 6
@@ -251,20 +249,11 @@ typedef struct
     User **users;
 } Game;
 
-const char *undertale[] = {
-    "music/track1.mp3",
-    "music/track2.mp3",
-    "music/track3.mp3",
-    NULL};
+const char *undertale[] = {NULL};
 
-const char *squid_game[] = {
-    "music/track4.mp3",
-    "music/track5.mp3",
-    NULL};
+const char *squid_game[] = {NULL};
 
-const char *taylor_swift[] = {
-    "test/music/Coldplay-FixYou.mp3",
-    NULL};
+const char *taylor_swift[] = {NULL};
 
 const char **playlists[] = {undertale, squid_game, taylor_swift};
 const char playlist_name[][13] = {"Undertale", "Squid Game", "Taylor Swift"};
@@ -284,7 +273,6 @@ int welcome_screen();
 void draw_new_account_screen();
 void new_account_screen();
 
-// void save_user_data();
 bool username_unique();
 bool email_unique();
 bool email_valid();
@@ -307,10 +295,6 @@ void print_wrong_password_format();
 
 void draw_sign_in_screen(int option, int show_password);
 void continue_game_screen();
-
-// int username_found(char username[26]);
-// int email_found(char email[29]);
-// bool password_correct(int user_index, char password[26]);
 
 void print_user_not_found();
 void print_email_not_found();
@@ -381,22 +365,15 @@ int *extra_corridors();
 
 int run_game_level(int level_num);
 
-// Function to clear and draw the scoreboard menu
 void draw_score_board_menu();
 
-// Function to draw the users' scores on the scoreboard for a specific page
 void draw_users_score_board(int page, int page_select);
 
-// Function to handle the scoreboard menu logic
 void score_board_menu();
 
-// Comparator function for sorting users by total_score (descending)
 int compare_users(const void *a, const void *b);
-
-// Function to save a single user's data to a CSV file
 int save_user_to_csv(const char *filename, const User *user);
 
-// Function to load users from a CSV file, keeping only the latest entries and sorting by score
 int load_users_from_csv(const char *filename, User ***users, int *num_users);
 
 char *generate_password();
@@ -424,13 +401,8 @@ void remove_weapon_from_inventory(int weapon_index);
 void remove_spell_from_inventory(int spell_index);
 void show_current_weapon();
 
-// When the player picks up a new weapon
 void add_current_weapon_to_inventory();
-
-// When the player opens the weapon inventory
 void show_weapon_inventory();
-
-// When the player selects a weapon to equip
 void equip_weapon(int selected_index);
 
 const char *weapon_name(ObjectType type);
