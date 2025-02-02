@@ -13,8 +13,8 @@
 #define MAX_ROOM_RATIO 1.6
 #define MIN_ROOM_RATIO 0.6
 
-#define VISIBILITY_RADIUS 2
-#define MAX_LEVEL 2
+#define VISIBILITY_RADIUS 3
+#define MAX_LEVEL 4
 #define MAX_OBJECT 50
 
 #define MIN_NORMAL_FOOD 5
@@ -357,9 +357,9 @@ void print_info(int level_num);
 void print_message(char *message, char *guide);
 void spawn_object(int level_num, ObjectType type);
 
-void show_food_inventory();
+void show_food_inventory(int level_num);
 void show_weapon_inventory();
-void show_spell_inventory();
+void show_spell_inventory(int level_num);
 
 void print_entire_map(int level_num);
 void print_entire_room(int level_num, int room_num);
