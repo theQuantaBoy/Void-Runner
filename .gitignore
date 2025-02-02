@@ -2,3 +2,10 @@ main
 notes/
 *.csv
 .vscode/
+STRUCTS.h
+test/
+music/
+main_3
+main.c
+FUNCTIONS.c
+FUNCTIONS.h
