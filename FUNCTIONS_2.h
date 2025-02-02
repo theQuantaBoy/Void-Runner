@@ -14,7 +14,7 @@
 #define MIN_ROOM_RATIO 0.6
 
 #define VISIBILITY_RADIUS 2
-#define MAX_LEVEL 4
+#define MAX_LEVEL 2
 #define MAX_OBJECT 50
 
 #define MIN_NORMAL_FOOD 5
@@ -60,6 +60,14 @@ typedef struct
     int x;
 } Point;
 
+typedef enum
+{
+    Normal = 0,
+    Enhant,
+    Nightmare,
+    Treasure
+} RoomType;
+
 typedef struct
 {
     int room_exist;
@@ -84,6 +92,8 @@ typedef struct
 
     int length;
     int width;
+
+    RoomType type;
 } Room;
 
 typedef enum
@@ -107,7 +117,8 @@ typedef enum
     HealthSpell = 18,
     SpeedSpell = 19,
     DamageSpell = 20,
-    BlackCoin = 21
+    BlackCoin = 21,
+    EmptyWeapon = 22,
 } ObjectType;
 
 typedef struct
@@ -116,6 +127,7 @@ typedef struct
     Point location;
     int visible;
     int location_room;
+    int food_step_count;
 } Object;
 
 typedef enum
@@ -136,6 +148,7 @@ typedef struct
     int follow;
     int visible;
     int location_room;
+    int stunned;
     EnemyType type;
 } Enemy;
 
@@ -143,7 +156,7 @@ typedef struct
 {
     int level_num;
 
-    Room room[10];
+    Room room[9];
     int room_num;
     int discovered_room_num;
 
@@ -164,27 +177,23 @@ typedef struct
     Level levels[4];
 } Map;
 
+const char *face[11] = {"🦊", "🐼", "🐯", "🐺", "👰", "🧙", "🧛", "🧝", "🎅", "👮"};
+const char *face_name[11] = {"Fox", "Panda", "Tiger", "Wolf", "Bride", "Wizard", "Vampire", "Elf", "Santa", "Police"};
+
 typedef enum
 {
-    // 🐶🐱🐹🐰🦊🐻🐼🐯🦁🐮🐷🐸🐺🦄🦝🐋🐍🐵
-    Dog = 0,
-    Cat,
-    Hamster,
-    Rabbit,
+    // 🦊🐼🐯🐺👰🥷🧙🧛🧝🎅👮
     Fox,
-    Bear,
     Panda,
     Tiger,
-    Lion,
-    Cow,
-    Pig,
-    Frog,
     Wolf,
-    Unicorn,
-    Raccoon,
-    Whale,
-    Snake,
-    Monkey
+    Bride,
+    Wizard,
+    Vampire,
+    Elf,
+    Santa,
+    Police,
+    Astronaut,
 } face_options;
 
 typedef struct
@@ -212,6 +221,11 @@ typedef struct
 
     Object current_weapon;
     int currect_weapon_num;
+
+    int dir_y;
+    int dir_x;
+
+    int last_room;
 } Character;
 
 typedef struct
@@ -221,6 +235,8 @@ typedef struct
     char email[26];
     int difficulty;
     int color_option;
+    int play_music;
+    int playlist;
     int game_num;
     int win_num;
     int total_score;
@@ -251,6 +267,7 @@ const char *taylor_swift[] = {
     NULL};
 
 const char **playlists[] = {undertale, squid_game, taylor_swift};
+const char playlist_name[][13] = {"Undertale", "Squid Game", "Taylor Swift"};
 
 void draw_border();
 
@@ -258,7 +275,6 @@ void title_screen();
 
 void random_map();
 void random_level(int level_num);
-void random_room();
 void print_level(int level_num);
 void print_room(int level_num, int room_num);
 
@@ -363,7 +379,7 @@ int find_level_num_from_file(char *file_name, int level_num);
 int *three_extra_rooms();
 int *extra_corridors();
 
-void run_game_level(int level_num);
+int run_game_level(int level_num);
 
 // Function to clear and draw the scoreboard menu
 void draw_score_board_menu();
@@ -406,5 +422,38 @@ void remove_enemy(int level_num, int enemy_index);
 void remove_food_from_inventory(int food_index);
 void remove_weapon_from_inventory(int weapon_index);
 void remove_spell_from_inventory(int spell_index);
+void show_current_weapon();
+
+// When the player picks up a new weapon
+void add_current_weapon_to_inventory();
+
+// When the player opens the weapon inventory
+void show_weapon_inventory();
+
+// When the player selects a weapon to equip
+void equip_weapon(int selected_index);
+
+const char *weapon_name(ObjectType type);
+
+int attack_with_mace(int level_num);
+int attack_with_dagger(int level_num, int direction_y, int direction_x);
+int attack_with_magic_wand(int level_num, int direction_y, int direction_x);
+int attack_with_normal_arrow(int level_num, int direction_y, int direction_x);
+int attack_with_gun(int level_num, int direction_y, int direction_x);
+
+void enemies_attack_hero(int level_num);
+
+void update_food_status();
+
+void treasure_level();
+void create_treasure_room_objects();
+
+void determine_room_types(int level_num);
+
+void show_death_screen();
+void show_win_screen();
+
+int find_user_index_from_username(const char *username);
+int find_user_index_from_email(const char *email);
 
 #endif
