@@ -24,7 +24,7 @@
 #include <SDL2/SDL_mixer.h>
 
 #include "ASCII_ART.h"
-#include "FUNCTIONS_2.h"
+#include "FUNCTIONS.h"
 
 Level level[MAX_LEVEL];
 Game game;
