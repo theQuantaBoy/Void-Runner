@@ -280,6 +280,7 @@ typedef struct
     int color_option;
     int play_music;
     int playlist;
+    int current_game;
     int game_num;
     int win_num;
     int total_score;
