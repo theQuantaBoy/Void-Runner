@@ -1,11 +1,11 @@
 /*******************************************
  *                                         *
- *            " VOID RUNNER "              *
+ *             " VOID RUNNER "             *
  *                                         *
- *        a game by: Mohsen Salah          *
- *         Student ID: 403106238           *
+ *         a game by: Mohsen Salah         *
+ *          Student ID: 403106238          *
  *                                         *
- *              2024 - 2025                *
+ *               2024 - 2025               *
  *                                         *
  *                                         *
  *******************************************/
@@ -105,6 +105,7 @@ int main()
 
     noecho();
 
+    play_playlist(Undertale);
     title_screen();
 
     while (1)
@@ -1123,13 +1124,13 @@ void print_room(int level_num, int room_num)
             attroff(COLOR_PAIR(6));
             for (int j = 1; j < width + 1; j++)
             {
-                // if (room_num == hero.location_room)
-                // {
-                attron(COLOR_PAIR(4));
-                if (visibility_grid[level_num][y + j][x + i] == 1)
-                    mvprintw(y + j, x + i, "·"); // middle dot - ASCII Number: 183
-                attroff(COLOR_PAIR(4));
-                // }
+                if (room_num == hero.location_room)
+                {
+                    attron(COLOR_PAIR(4));
+                    if (visibility_grid[level_num][y + j][x + i] == 1)
+                        mvprintw(y + j, x + i, "·"); // middle dot - ASCII Number: 183
+                    attroff(COLOR_PAIR(4));
+                }
             }
             attron(COLOR_PAIR(6));
             if (visibility_grid[level_num][y + width + 1][x + i] == 1)
@@ -3836,7 +3837,7 @@ void title_screen()
     refresh();
 }
 
-// Welcome Screen - Manu
+// Welcome Screen - Menu
 void draw_welcome_screen_border()
 {
     clear();
@@ -6459,4 +6460,24 @@ void show_win_screen()
     mvprintw(LINES - 40, ((COLS / 2) - 23), "Congrats, you won. You are officially amazing!");
     mvprintw(LINES - 38, ((COLS / 2) - 9), "- Press any key -");
     getch();
+}
+
+void play_playlist(const char **playlist)
+{
+    static int current_track = 0;
+
+    if (playlist[current_track] == NULL)
+    {
+        current_track = 0;
+    }
+
+    Mix_Music *music = Mix_LoadMUS(playlist[current_track]);
+    if (!music)
+    {
+        fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
+        return;
+    }
+
+    Mix_PlayMusic(music, 0);
+    current_track++;
 }

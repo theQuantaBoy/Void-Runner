@@ -53,29 +53,29 @@ const char *welcome_options[4] = {"Log In", "Create New Account", "Play as Guest
 const char *new_account_options[3] = {"Username: ", "Email: ", "Password: "};
 
 const char *Undertale[] = {
-    "../music/Taylor_Swift/\"22 - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"Anti-Hero - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"Cruel Summer - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"epiphany - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"Florida!!! (feat. Florence + The Machine) - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"Fortnight (feat. Post Malone) - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"I Can Do It With a Broken Heart - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"Look What You Made Me Do - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"Lover - Taylor Swift.mp3\"",
-    "../music/Taylor_Swift/\"willow - Taylor Swift.mp3\"",
+    "../music/Undertale/Fallen Down - Toby Fox.mp3",
+    "../music/Undertale/Bonetrousle - Toby Fox.mp3",
+    "../music/Undertale/Heartache - Toby Fox.mp3",
+    "../music/Undertale/Home (Music Box) - Toby Fox.mp3",
+    "../music/Undertale/MEGALOVANIA - Toby Fox.mp3",
+    "../music/Undertale/Nyeh Heh Heh! - Toby Fox.mp3",
+    "../music/Undertale/Run! - Toby Fox.mp3",
+    "../music/Undertale/Song That Might Play When You Fight Sans - Toby Fox.mp3",
+    "../music/Undertale/Spear of Justice - Toby Fox.mp3",
+    "../music/Undertale/Spookwave - Toby Fox.mp3",
     NULL};
 
 const char *Taylor_Swift[] = {
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
+    "../music/Taylor_Swift/22 - Taylor Swift.mp3",
+    "../music/Taylor_Swift/Anti-Hero - Taylor Swift.mp3",
+    "../music/Taylor_Swift/Cruel Summer - Taylor Swift.mp3",
+    "../music/Taylor_Swift/epiphany - Taylor Swift.mp3",
+    "../music/Taylor_Swift/Florida!!! (feat. Florence + The Machine) - Taylor Swift.mp3",
+    "../music/Taylor_Swift/Fortnight (feat. Post Malone) - Taylor Swift.mp3",
+    "../music/Taylor_Swift/I Can Do It With a Broken Heart - Taylor Swift.mp3",
+    "../music/Taylor_Swift/Look What You Made Me Do - Taylor Swift.mp3",
+    "../music/Taylor_Swift/Lover - Taylor Swift.mp3",
+    "../music/Taylor_Swift/willow - Taylor Swift.mp3",
     NULL};
 
 const char *Bo_Burnham[] = {
@@ -92,7 +92,7 @@ const char *Bo_Burnham[] = {
     NULL};
 
 const char **playlists[] = {Undertale, Taylor_Swift, Bo_Burnham};
-const char playlist_name[][13] = {"Undertale", "Taylor Swift", "Bo Burnham (Inside)"};
+const char playlist_name[][13] = {"Undertale", "Taylor Swift", "Bo Burnham"};
 ;
 
 typedef struct

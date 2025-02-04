@@ -8,3 +8,4 @@ music/
 main_2
 main_2.c
 Functions.c
+src/*.csv
