@@ -37,6 +37,62 @@ int added_coin = 0;
 int object_index = -1;
 int enemy_index = -1;
 
+int global_playlist = 1;
+
+void music_finished_callback(void)
+{
+    play_playlist(global_playlist);
+}
+
+void play_specific_track(const char *track, const char **playlist)
+{
+    if (Mix_PlayingMusic())
+    {
+        Mix_HaltMusic();
+    }
+
+    Mix_Music *music = Mix_LoadMUS(track);
+    if (!music)
+    {
+        fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
+        return;
+    }
+
+    Mix_PlayMusic(music, 0);
+
+    while (Mix_PlayingMusic())
+    {
+        SDL_Delay(100);
+    }
+}
+
+void jumpscare(const char *scary_music)
+{
+    if (Mix_PlayingMusic())
+    {
+        Mix_HaltMusic();
+    }
+
+    Mix_Music *music = Mix_LoadMUS(scary_music);
+    if (!music)
+    {
+        fprintf(stderr, "Failed to load jump scare music! SDL_mixer Error: %s\n", Mix_GetError());
+        return;
+    }
+    Mix_PlayMusic(music, 0);
+
+    clear();
+    golden_freddy_appear();
+    refresh();
+
+    SDL_Delay(5000);
+
+    clear();
+    refresh();
+
+    play_playlist(global_playlist);
+}
+
 int main()
 {
     setlocale(LC_ALL, "");
@@ -105,11 +161,22 @@ int main()
 
     noecho();
 
-    play_playlist(Undertale);
+    // Set the music finished callback
+    Mix_HookMusicFinished(music_finished_callback);
+
+    // Start playing the first track
+    // const char **global_playlist = playlists[2];
+    play_playlist(global_playlist);
+
     title_screen();
 
     while (1)
     {
+        if (!Mix_PlayingMusic())
+        {
+            play_playlist(global_playlist);
+        }
+
         int choice = welcome_screen();
 
         if (choice == 0) // continue game
@@ -4764,7 +4831,9 @@ int run_game_level(int i)
             {
                 print_message("Welcome to the Nightmare Room!", "");
                 if (rand() % 3 == 0)
-                    golden_freddy_appear();
+                {
+                    jumpscare(jumpscare_sound);
+                }
             }
         }
         hero.last_room = find_room(i, hero.location);
@@ -5593,8 +5662,6 @@ void golden_freddy_appear()
         mvprintw((LINES / 2) - 29 + i, (COLS / 2) - 65, "%s", golden_freddy[i]);
     attroff(COLOR_PAIR(7));
     refresh();
-    sleep(4);
-    clear();
 }
 
 void create_enemies(int level_num)
@@ -6462,16 +6529,16 @@ void show_win_screen()
     getch();
 }
 
-void play_playlist(const char **playlist)
+void play_playlist(int playlist_num)
 {
     static int current_track = 0;
 
-    if (playlist[current_track] == NULL)
+    if ((playlists[playlist_num])[current_track] == NULL)
     {
         current_track = 0;
     }
 
-    Mix_Music *music = Mix_LoadMUS(playlist[current_track]);
+    Mix_Music *music = Mix_LoadMUS((playlists[playlist_num])[current_track]);
     if (!music)
     {
         fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
@@ -6479,5 +6546,5 @@ void play_playlist(const char **playlist)
     }
 
     Mix_PlayMusic(music, 0);
-    current_track++;
+    current_track += 1;
 }

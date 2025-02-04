@@ -66,10 +66,10 @@ const char *Undertale[] = {
     NULL};
 
 const char *Taylor_Swift[] = {
+    "../music/Taylor_Swift/epiphany - Taylor Swift.mp3",
     "../music/Taylor_Swift/22 - Taylor Swift.mp3",
     "../music/Taylor_Swift/Anti-Hero - Taylor Swift.mp3",
     "../music/Taylor_Swift/Cruel Summer - Taylor Swift.mp3",
-    "../music/Taylor_Swift/epiphany - Taylor Swift.mp3",
     "../music/Taylor_Swift/Florida!!! (feat. Florence + The Machine) - Taylor Swift.mp3",
     "../music/Taylor_Swift/Fortnight (feat. Post Malone) - Taylor Swift.mp3",
     "../music/Taylor_Swift/I Can Do It With a Broken Heart - Taylor Swift.mp3",
@@ -79,17 +79,19 @@ const char *Taylor_Swift[] = {
     NULL};
 
 const char *Bo_Burnham[] = {
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
-    "../music/Taylor_Swift/",
+    "../music/Bo_Burnham/That Funny Feeling - Bo Burnham.mp3",
+    "../music/Bo_Burnham/The Chicken - Bo Burnham.mp3",
+    "../music/Bo_Burnham/Welcome to The Internet - Bo Burnham.mp3",
+    "../music/Bo_Burnham/1985 - Bo Burnham.mp3",
+    "../music/Bo_Burnham/All Eyes On Me - Bo Burnham.mp3",
+    "../music/Bo_Burnham/Content - Bo Burnham.mp3",
+    "../music/Bo_Burnham/Goodbye - Bo Burnham.mp3",
+    "../music/Bo_Burnham/How the World Works - Bo Burnham.mp3",
+    "../music/Bo_Burnham/Look Who_s Inside Again - Bo Burnham.mp3",
+    "../music/Bo_Burnham/Microwave Popcorn - Bo Burnham.mp3",
     NULL};
+
+const char *jumpscare_sound = {"../music/Special/five-nights-at-freddys-full-scream-sound.mp3"};
 
 const char **playlists[] = {Undertale, Taylor_Swift, Bo_Burnham};
 const char playlist_name[][13] = {"Undertale", "Taylor Swift", "Bo Burnham"};
@@ -424,7 +426,7 @@ int valid_point_enemy(int level_num, Point destination);
 Point random_location_enemy(int level_num);
 void draw_message_border();
 
-void play_playlist(const char **playlist);
+void play_playlist(int playlist_num);
 void draw_inventory_border();
 void draw_info_border();
 
