@@ -86,13 +86,13 @@ void jumpscare(const char *scary_music)
     }
     Mix_PlayMusic(music, 0);
 
-    clear();
+    erase();
     golden_freddy_appear();
     refresh();
 
     SDL_Delay(5000);
 
-    clear();
+    erase();
     refresh();
 
     play_playlist(global_playlist);
@@ -825,7 +825,7 @@ int main()
     free_map_and_visibility(LINES);
 
     endwin();
-    clear();
+    erase();
 
     return 0;
 }
@@ -3671,7 +3671,7 @@ void show_current_weapon()
 
 void print_entire_map(int level_num)
 {
-    clear();
+    erase();
     print_message("Map", "Press 'q' to close map.");
     for (int i = 0; i < 9; i++)
         print_entire_room(level_num, i);
@@ -3703,41 +3703,32 @@ void print_entire_room(int level_num, int room_num)
         for (int i = 0; i < length; i++)
         {
             attron(COLOR_PAIR(6));
-            if (visibility_grid[level_num][y][x + i] == 1)
-                mvprintw(y, x + i, "═");
+            mvprintw(y, x + i, "═");
             attroff(COLOR_PAIR(6));
             for (int j = 1; j < width + 1; j++)
             {
                 attron(COLOR_PAIR(4));
-                if (visibility_grid[level_num][y + j][x + i] == 1)
-                    mvprintw(y + j, x + i, "·"); // middle dot - ASCII Number: 183
+                mvprintw(y + j, x + i, "·"); // middle dot - ASCII Number: 183
                 attroff(COLOR_PAIR(4));
             }
             attron(COLOR_PAIR(6));
-            if (visibility_grid[level_num][y + width + 1][x + i] == 1)
-                mvprintw(y + width + 1, x + i, "═");
+            mvprintw(y + width + 1, x + i, "═");
             attroff(COLOR_PAIR(6));
         }
 
         for (int i = 0; i < width; i++)
         {
             attron(COLOR_PAIR(6));
-            if (visibility_grid[level_num][y + i + 1][x - 1] == 1)
-                mvprintw(y + i + 1, x - 1, "║");
-            if (visibility_grid[level_num][y + i + 1][x + length] == 1)
-                mvprintw(y + i + 1, x + length, "║");
+            mvprintw(y + i + 1, x - 1, "║");
+            mvprintw(y + i + 1, x + length, "║");
             attroff(COLOR_PAIR(6));
         }
 
         attron(COLOR_PAIR(6));
-        if (visibility_grid[level_num][y][x - 1] == 1)
-            mvprintw(y, x - 1, "╔");
-        if (visibility_grid[level_num][y][x + length] == 1)
-            mvprintw(y, x + length, "╗");
-        if (visibility_grid[level_num][y + width + 1][x - 1] == 1)
-            mvprintw(y + width + 1, x - 1, "╚");
-        if (visibility_grid[level_num][y + width + 1][x + length] == 1)
-            mvprintw(y + width + 1, x + length, "╝");
+        mvprintw(y, x - 1, "╔");
+        mvprintw(y, x + length, "╗");
+        mvprintw(y + width + 1, x - 1, "╚");
+        mvprintw(y + width + 1, x + length, "╝");
         attroff(COLOR_PAIR(6));
     }
 }
@@ -4303,7 +4294,7 @@ void title_screen()
 // Welcome Screen - Menu
 void draw_welcome_screen_border()
 {
-    clear();
+    erase();
     draw_border();
     mvprintw((LINES / 2) - 5, (COLS / 2) - 18, "__ Welcome _________________________");
     mvprintw((LINES / 2) + 5, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
@@ -4346,7 +4337,7 @@ int welcome_screen()
 // Create New Account - Menu
 void draw_new_account_screen(int show_password)
 {
-    clear();
+    erase();
     draw_border();
     mvprintw((LINES / 2) - 8, (COLS / 2) - 24, "__ New Account _________________________________");
     mvprintw((LINES / 2) - 6, (COLS / 2) - 17, "Username: ");
@@ -4696,7 +4687,7 @@ void print_wrong_password_format() // Error 5
 // Sign In / Continue Previous Game - Menu
 void draw_sign_in_screen(int option, int show_password)
 {
-    clear();
+    erase();
     draw_border();
 
     if (option == 0)
@@ -5011,7 +5002,7 @@ void print_wrong_password() // Error 3
 // User Options Menu
 void draw_user_options_menu()
 {
-    clear();
+    erase();
     draw_border();
     mvprintw((LINES / 2) - 8, (COLS / 2) - 18, "__ User Options ____________________");
     mvprintw((LINES / 2) - 6, (COLS / 2) - 11, "New Game");
@@ -5067,7 +5058,7 @@ int user_options_menu()
 // User Settings Menu
 void draw_user_settings_menu()
 {
-    clear();
+    erase();
     draw_border();
     mvprintw((LINES / 2) - 8, (COLS / 2) - 28, "__ Settings ___________________________________________");
     mvprintw((LINES / 2) - 6, (COLS / 2) - 21, "Difficulty   [                    ]  (    %%)");
@@ -5097,7 +5088,7 @@ void user_settings_menu()
 
     while (1)
     {
-        clear();
+        erase();
         draw_user_settings_menu();
 
         if (choice == 0)
@@ -5189,7 +5180,7 @@ int run_game_level(int i)
         enemy_index = -1;
         int attacked = 0;
 
-        clear();
+        erase();
         make_cells_visible(i);
         make_enemies_visible(i);
         location_result = handle_location(i);
@@ -5600,6 +5591,9 @@ int run_game_level(int i)
             return -3;
         }
 
+        if (input == 'f' || input == 'F')
+            return -1;
+
         if (input == 'k' || input == 'K')
         {
             switch (hero.current_weapon.type)
@@ -5694,7 +5688,7 @@ int run_game_level(int i)
 
 void draw_score_board_menu()
 {
-    clear();
+    erase();
     attron(COLOR_PAIR(1));
     mvprintw((LINES / 2) - 12, (COLS / 2) - 46, "__ Score Board _____________________________________________________________________________");
     mvprintw((LINES / 2) - 10, (COLS / 2) - 41, "Rank      Champion                   Score      Gold      Wins / Games      Epithet");
@@ -6042,7 +6036,7 @@ char *generate_password()
 
 void golden_freddy_appear()
 {
-    clear();
+    erase();
     attron(COLOR_PAIR(7));
     for (int i = 0; i < 58; i++)
         mvprintw((LINES / 2) - 29 + i, (COLS / 2) - 65, "%s", golden_freddy[i]);
@@ -6897,7 +6891,7 @@ void update_food_status()
 
 void show_death_screen()
 {
-    clear();
+    erase();
     // for (int i = 0; i < 33; i++)
     //     mvprintw(LINES - 33 + i, (COLS / 2) - 31, "%s", tombstone[i]);
     mvprintw(LINES - 40, ((COLS / 2) - 26), "Sorry, you Lost. I know you can do better next time!");
@@ -6907,7 +6901,7 @@ void show_death_screen()
 
 void show_win_screen()
 {
-    clear();
+    erase();
     // for (int i = 0; i < 34; i++)
     //     mvprintw(LINES - 34 + i, (COLS / 2) - 33, "%s", tombstone[i]);
     mvprintw(LINES - 40, ((COLS / 2) - 23), "Congrats, you won. You are officially amazing!");
