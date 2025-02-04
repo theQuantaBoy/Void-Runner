@@ -19,6 +19,8 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <regex.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
@@ -37,7 +39,7 @@ int added_coin = 0;
 int object_index = -1;
 int enemy_index = -1;
 
-int global_playlist = 1;
+int global_playlist;
 
 void music_finished_callback(void)
 {
@@ -46,23 +48,26 @@ void music_finished_callback(void)
 
 void play_specific_track(const char *track, const char **playlist)
 {
-    if (Mix_PlayingMusic())
+    if (current_user.play_music == 1)
     {
-        Mix_HaltMusic();
-    }
+        if (Mix_PlayingMusic())
+        {
+            Mix_HaltMusic();
+        }
 
-    Mix_Music *music = Mix_LoadMUS(track);
-    if (!music)
-    {
-        fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
-        return;
-    }
+        Mix_Music *music = Mix_LoadMUS(track);
+        if (!music)
+        {
+            fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
+            return;
+        }
 
-    Mix_PlayMusic(music, 0);
+        Mix_PlayMusic(music, 0);
 
-    while (Mix_PlayingMusic())
-    {
-        SDL_Delay(100);
+        while (Mix_PlayingMusic())
+        {
+            SDL_Delay(100);
+        }
     }
 }
 
@@ -95,12 +100,26 @@ void jumpscare(const char *scary_music)
 
 char *generate_save_filename(const char *username, int current_game)
 {
-    size_t size = snprintf(NULL, 0, "%s_%d.save", username, current_game) + 1;
+    if (mkdir("save", 0755) == -1 && errno != EEXIST)
+    {
+        perror("mkdir save");
+        return NULL;
+    }
+
+    char dir_path[256];
+    snprintf(dir_path, sizeof(dir_path), "save/%s", username);
+    if (mkdir(dir_path, 0755) == -1 && errno != EEXIST)
+    {
+        perror("mkdir username directory");
+        return NULL;
+    }
+
+    size_t size = snprintf(NULL, 0, "save/%s/%s_%d.save", username, username, current_game) + 1;
     char *filename = malloc(size);
     if (!filename)
         return NULL;
 
-    snprintf(filename, size, "%s_%d.save", username, current_game);
+    snprintf(filename, size, "save/%s/%s_%d.save", username, username, current_game);
     return filename;
 }
 
@@ -507,12 +526,19 @@ void load_full_game_state(const char *filename)
     fclose(file);
 }
 
-const char temp_user[] = "test_user";
-char *filename;
-
 int main()
 {
-    filename = generate_save_filename(temp_user, 1);
+    strcmp(current_user.username, "temp_user");
+    current_user.play_music = 1;
+    current_user.playlist = 0;
+    current_user.color_option = 1;
+    current_user.difficulty = 10;
+    current_user.total_score = 0;
+    current_user.total_gold = 0;
+    current_user.win_num = 0;
+    current_user.current_game = 0;
+
+    global_playlist = current_user.playlist;
 
     setlocale(LC_ALL, "");
     srand(time(NULL));
@@ -535,20 +561,8 @@ int main()
 
     load_users_from_csv("users.csv", &game.users, &game.users_num);
 
-    // initialize_visibility_grid();
-    // initialize_map();
-
-    hero.health = 90, hero.coins = 0, hero.speed = 80, hero.satiety = 90, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
-
-    hero.food_inventory = (Object *)malloc(MAX_FOOD * sizeof(Object));
-    hero.food_num = 0;
-
-    hero.weapon_inventory = (Object *)malloc(MAX_WEAPON * sizeof(Object));
-    hero.weapon_inventory[0].type = Mace;
-    hero.weapon_num = 1;
-
-    hero.spell_inventory = (Object *)malloc(MAX_SPELL * sizeof(Object));
-    hero.spell_num = 0;
+    initialize_visibility_grid();
+    initialize_map();
 
     if (can_change_color())
     {
@@ -580,11 +594,8 @@ int main()
 
     noecho();
 
-    // Set the music finished callback
     Mix_HookMusicFinished(music_finished_callback);
 
-    // Start playing the first track
-    // const char **global_playlist = playlists[2];
     play_playlist(global_playlist);
 
     title_screen();
@@ -604,54 +615,127 @@ int main()
 
             while (1)
             {
+                global_playlist = current_user.playlist;
+                play_playlist(global_playlist);
+
                 int user_option_choice = user_options_menu();
 
                 if (user_option_choice == 0) // New Game
                 {
+                    hero.health = 100, hero.coins = 0, hero.speed = 80, hero.satiety = 100, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
+
+                    hero.food_inventory = (Object *)malloc(MAX_FOOD * sizeof(Object));
+                    hero.food_num = 0;
+
+                    hero.weapon_inventory = (Object *)malloc(MAX_WEAPON * sizeof(Object));
+                    hero.weapon_inventory[0].type = Mace;
+                    hero.weapon_num = 1;
+
+                    hero.spell_inventory = (Object *)malloc(MAX_SPELL * sizeof(Object));
+                    hero.spell_num = 0;
+
+                    current_user.game_num += 1;
                     random_map();
+
                     int level_num = 0;
+                    current_user.game_num = 1;
+
                     while (1)
                     {
                         if (level_num >= 0 && level_num < MAX_LEVEL)
                             level_num = run_game_level(level_num);
 
-                        if (level_num == -2)
+                        else if (level_num == -2)
                         {
                             show_death_screen();
+                            current_user.game_num += 1;
+                            current_user.current_game = 0;
                             break;
                         }
 
-                        if (level_num == MAX_LEVEL)
+                        else if (level_num == MAX_LEVEL)
                         {
                             show_win_screen();
+                            current_user.game_num += 1;
+                            current_user.win_num += 1;
+                            current_user.current_game = 0;
+                            break;
+                        }
+
+                        else if (level_num == -3)
+                        {
+                            current_user.current_game = 1;
+                            break;
+                        }
+
+                        else if (level_num == -1)
+                        {
+                            current_user.current_game = 0;
                             break;
                         }
                     }
+
                     save_user_to_csv("users.csv", &current_user);
+                    break;
                 }
 
                 if (user_option_choice == 1) // continue_previous_game
                 {
-                    load_full_game_state(filename);
-                    int level_num = 0;
-                    while (1)
+                    if (current_user.current_game = 1)
                     {
-                        if (level_num >= 0 && level_num < MAX_LEVEL)
-                            level_num = run_game_level(level_num);
+                        hero.health = 100, hero.coins = 0, hero.speed = 80, hero.satiety = 100, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
 
-                        if (level_num == -2)
+                        hero.food_inventory = (Object *)malloc(MAX_FOOD * sizeof(Object));
+                        hero.food_num = 0;
+
+                        hero.weapon_inventory = (Object *)malloc(MAX_WEAPON * sizeof(Object));
+                        hero.weapon_inventory[0].type = Mace;
+                        hero.weapon_num = 1;
+
+                        hero.spell_inventory = (Object *)malloc(MAX_SPELL * sizeof(Object));
+                        hero.spell_num = 0;
+
+                        load_full_game_state(generate_save_filename(current_user.username, current_user.current_game));
+
+                        int level_num = 0;
+                        while (1)
                         {
-                            show_death_screen();
-                            break;
+                            if (level_num >= 0 && level_num < MAX_LEVEL)
+                                level_num = run_game_level(level_num);
+
+                            else if (level_num == -2)
+                            {
+                                show_death_screen();
+                                current_user.game_num += 1;
+                                current_user.current_game = 0;
+                                break;
+                            }
+
+                            else if (level_num == MAX_LEVEL)
+                            {
+                                show_win_screen();
+                                current_user.game_num += 1;
+                                current_user.win_num += 1;
+                                current_user.current_game = 0;
+                                break;
+                            }
+
+                            else if (level_num == -3)
+                            {
+                                current_user.current_game = 1;
+                                break;
+                            }
+
+                            else if (level_num == -1)
+                            {
+                                current_user.current_game = 0;
+                                break;
+                            }
                         }
 
-                        if (level_num == MAX_LEVEL)
-                        {
-                            show_win_screen();
-                            break;
-                        }
+                        save_user_to_csv("users.csv", &current_user);
+                        break;
                     }
-                    save_user_to_csv("users.csv", &current_user);
                 }
 
                 if (user_option_choice == 2) // View Score Board
@@ -663,9 +747,11 @@ int main()
                 {
                 }
 
-                if (user_option_choice == 4)
+                if (user_option_choice == 4) // Settings
                 {
                     user_settings_menu();
+                    global_playlist = current_user.playlist;
+                    play_playlist(global_playlist);
                     save_user_to_csv("users.csv", &current_user);
                 }
             }
@@ -678,29 +764,66 @@ int main()
 
         else if (choice == 2) // Play as Guest
         {
+            hero.health = 100, hero.coins = 0, hero.speed = 80, hero.satiety = 100, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
+
+            hero.food_inventory = (Object *)malloc(MAX_FOOD * sizeof(Object));
+            hero.food_num = 0;
+
+            hero.weapon_inventory = (Object *)malloc(MAX_WEAPON * sizeof(Object));
+            hero.weapon_inventory[0].type = Mace;
+            hero.weapon_num = 1;
+
+            hero.spell_inventory = (Object *)malloc(MAX_SPELL * sizeof(Object));
+            hero.spell_num = 0;
+
             random_map();
+
             int level_num = 0;
             while (1)
             {
                 if (level_num >= 0 && level_num < MAX_LEVEL)
                     level_num = run_game_level(level_num);
 
-                if (level_num == -2)
+                else if (level_num == -2)
                 {
                     show_death_screen();
+                    current_user.game_num += 1;
+                    current_user.current_game = 0;
                     break;
                 }
 
-                if (level_num == MAX_LEVEL)
+                else if (level_num == MAX_LEVEL)
                 {
                     show_win_screen();
+                    current_user.game_num += 1;
+                    current_user.win_num += 1;
+                    current_user.current_game = 0;
+                    break;
+                }
+
+                else if (level_num == -3)
+                {
+                    current_user.current_game = 1;
+                    break;
+                }
+
+                else if (level_num == -1)
+                {
+                    current_user.current_game = 0;
                     break;
                 }
             }
+
+            save_user_to_csv("users.csv", &current_user);
+            break;
         }
+
+        else if (choice == 3) // Quit
+            break;
     }
 
-    free_visibility_grid();
+    free_map_and_visibility(LINES);
+
     endwin();
     clear();
 
@@ -4365,6 +4488,7 @@ void new_account_screen()
             temp->win_num = 0;
             temp->total_gold = 0;
             temp->total_score = 0;
+            temp->current_game = 0;
 
             save_user_to_csv("users.csv", temp);
             break;
@@ -4665,28 +4789,6 @@ bool password_correct(int user_index, const char *password)
     return strcmp(game.users[user_index]->password, password) == 0;
 }
 
-// Function to get user data by username
-void data_from_username(const char *username, int *difficulty, int *color_option)
-{
-    int index = username_found(username);
-    if (index != -1)
-    {
-        *difficulty = game.users[index]->difficulty;
-        *color_option = game.users[index]->color_option;
-    }
-}
-
-// Function to get user data by email
-void data_from_email(const char *email, int *difficulty, int *color_option)
-{
-    int index = email_found(email);
-    if (index != -1)
-    {
-        *difficulty = game.users[index]->difficulty;
-        *color_option = game.users[index]->color_option;
-    }
-}
-
 int find_user_index_from_username(const char *username)
 {
     load_users_from_csv("users.csv", &game.users, &game.users_num);
@@ -4850,6 +4952,7 @@ void continue_game_screen()
             current_user.total_gold = user->total_gold;
             current_user.play_music = user->play_music;
             current_user.playlist = user->playlist;
+            current_user.current_game = user->current_game;
             break;
         }
         else if (choice == 4 && (key == 10 || key == 32))
@@ -5117,10 +5220,10 @@ int run_game_level(int i)
         {
             if (level[i].discovered_room_num == level[i].room_num)
             {
-                print_message("You found the staircase!", "You can use Right and Left arrows to go to other levels.");
+                print_message("You found the staircase!", "You can use < and > keys to go to other levels.");
                 input = getch();
 
-                if (input == KEY_RIGHT)
+                if (input == '>')
                 {
                     move(LINES - 5, 0);
                     clrtoeol();
@@ -5128,7 +5231,7 @@ int run_game_level(int i)
                     return i + 1;
                 }
 
-                if (input == KEY_LEFT)
+                if (input == '<')
                 {
                     move(LINES - 5, 0);
                     clrtoeol();
@@ -5491,12 +5594,10 @@ int run_game_level(int i)
 
         if (input == 't' || input == 'T')
         {
-            save_full_game_state(filename, i);
-            clear();
-            mvprintw(5, 5, "Game Saved");
+            save_full_game_state(generate_save_filename(current_user.username, current_user.game_num), i);
+            print_message("Game Sved!", "Press any key...");
             refresh();
-            getch();
-            break;
+            return -3;
         }
 
         if (input == 'k' || input == 'K')
@@ -5782,7 +5883,7 @@ int save_user_to_csv(const char *filename, const User *user)
     if (!file)
         return -1;
 
-    fprintf(file, "%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    fprintf(file, "%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
             user->username,
             user->password,
             user->email,
@@ -5793,7 +5894,8 @@ int save_user_to_csv(const char *filename, const User *user)
             user->total_score,
             user->total_gold,
             user->play_music,
-            user->playlist);
+            user->playlist,
+            user->current_game);
 
     fclose(file);
     return 0;
@@ -5827,7 +5929,7 @@ int load_users_from_csv(const char *filename, User ***users, int *num_users)
         }
 
         int parsed = sscanf(buffer,
-                            "%25[^,],%28[^,],%25[^,],%d,%d,%d,%d,%d,%d,%d,%d",
+                            "%25[^,],%28[^,],%25[^,],%d,%d,%d,%d,%d,%d,%d,%d,%d",
                             new_user->username,
                             new_user->password,
                             new_user->email,
@@ -5838,9 +5940,10 @@ int load_users_from_csv(const char *filename, User ***users, int *num_users)
                             &new_user->total_score,
                             &new_user->total_gold,
                             &new_user->play_music,
-                            &new_user->playlist);
+                            &new_user->playlist,
+                            &new_user->current_game);
 
-        if (parsed != 11)
+        if (parsed != 12)
         {
             free(new_user);
             continue;
@@ -6814,20 +6917,23 @@ void show_win_screen()
 
 void play_playlist(int playlist_num)
 {
-    static int current_track = 0;
-
-    if ((playlists[playlist_num])[current_track] == NULL)
+    if (current_user.play_music == 1)
     {
-        current_track = 0;
-    }
+        static int current_track = 0;
 
-    Mix_Music *music = Mix_LoadMUS((playlists[playlist_num])[current_track]);
-    if (!music)
-    {
-        fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
-        return;
-    }
+        if ((playlists[playlist_num])[current_track] == NULL)
+        {
+            current_track = 0;
+        }
 
-    Mix_PlayMusic(music, 0);
-    current_track += 1;
+        Mix_Music *music = Mix_LoadMUS((playlists[playlist_num])[current_track]);
+        if (!music)
+        {
+            fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
+            return;
+        }
+
+        Mix_PlayMusic(music, 0);
+        current_track += 1;
+    }
 }
