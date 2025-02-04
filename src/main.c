@@ -93,27 +93,29 @@ void jumpscare(const char *scary_music)
     play_playlist(global_playlist);
 }
 
-void generate_save_filename(const char *username, int current_game, char *filename, size_t size)
+char *generate_save_filename(const char *username, int current_game)
 {
-    // Format: username_currentGame.save
+    size_t size = snprintf(NULL, 0, "%s_%d.save", username, current_game) + 1;
+    char *filename = malloc(size);
+    if (!filename)
+        return NULL;
+
     snprintf(filename, size, "%s_%d.save", username, current_game);
+    return filename;
 }
 
-// Save the full game state (global map, visibility_grid, and level data)
-void save_full_game_state(const char *filename, int current_level, const Map *gameMap)
+void save_full_game_state(const char *filename, int current_level)
 {
-    FILE *file = fopen(filename, "w"); // overwrite the file
+    FILE *file = fopen(filename, "w");
     if (!file)
     {
         perror("save_full_game_state: Failed to open file");
         return;
     }
 
-    // Write header: dimensions and current level.
     fprintf(file, "LINES %d COLS %d\n", LINES, COLS);
     fprintf(file, "CURRENT_LEVEL %d\n", current_level);
 
-    // Write global map data.
     fprintf(file, "GLOBAL_MAP\n");
     for (int level = 0; level < MAX_LEVEL; level++)
     {
@@ -129,7 +131,6 @@ void save_full_game_state(const char *filename, int current_level, const Map *ga
     }
     fprintf(file, "END_GLOBAL_MAP\n");
 
-    // Write global visibility data.
     fprintf(file, "GLOBAL_VISIBILITY\n");
     for (int level = 0; level < MAX_LEVEL; level++)
     {
@@ -145,17 +146,15 @@ void save_full_game_state(const char *filename, int current_level, const Map *ga
     }
     fprintf(file, "END_GLOBAL_VISIBILITY\n");
 
-    // Write full level data.
     fprintf(file, "LEVEL_DATA_SECTION\n");
     for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
     {
-        const Level *lev = &gameMap->levels[lvl];
+        const Level *lev = &level[lvl];
         fprintf(file, "LEVEL_DATA %d\n", lvl);
         fprintf(file, "level_num %d\n", lev->level_num);
         fprintf(file, "room_num %d\n", lev->room_num);
         fprintf(file, "discovered_room_num %d\n", lev->discovered_room_num);
 
-        // Save room data.
         fprintf(file, "ROOMS\n");
         for (int r = 0; r < 9; r++)
         {
@@ -192,7 +191,6 @@ void save_full_game_state(const char *filename, int current_level, const Map *ga
         }
         fprintf(file, "END_ROOMS\n");
 
-        // Save between_doors arrays.
         fprintf(file, "between_doors_1\n");
         for (int i = 0; i < 12; i++)
         {
@@ -210,7 +208,6 @@ void save_full_game_state(const char *filename, int current_level, const Map *ga
         }
         fprintf(file, "\n");
 
-        // Save objects.
         fprintf(file, "OBJECTS\n");
         fprintf(file, "object_num %d\n", lev->object_num);
         for (int o = 0; o < lev->object_num; o++)
@@ -222,7 +219,6 @@ void save_full_game_state(const char *filename, int current_level, const Map *ga
         }
         fprintf(file, "END_OBJECTS\n");
 
-        // Save enemies.
         fprintf(file, "ENEMIES\n");
         fprintf(file, "enemy_num %d\n", lev->enemy_num);
         for (int e = 0; e < lev->enemy_num; e++)
@@ -242,8 +238,7 @@ void save_full_game_state(const char *filename, int current_level, const Map *ga
     fclose(file);
 }
 
-// Helper functions to free and allocate the global map and visibility_grid.
-void free_map_and_visibility()
+void free_map_and_visibility(int lines)
 {
     if (map)
     {
@@ -251,7 +246,7 @@ void free_map_and_visibility()
         {
             if (map[level])
             {
-                for (int i = 0; i < LINES; i++)
+                for (int i = 0; i < lines; i++)
                 {
                     free(map[level][i]);
                 }
@@ -267,7 +262,7 @@ void free_map_and_visibility()
         {
             if (visibility_grid[level])
             {
-                for (int i = 0; i < LINES; i++)
+                for (int i = 0; i < lines; i++)
                 {
                     free(visibility_grid[level][i]);
                 }
@@ -281,80 +276,25 @@ void free_map_and_visibility()
 
 void allocate_map_and_visibility(int lines, int cols)
 {
-    int file_LINES = lines;
-    int file_COLS = cols;
-
     map = (short int ***)malloc(MAX_LEVEL * sizeof(short int **));
     for (int level = 0; level < MAX_LEVEL; level++)
     {
-        map[level] = (short int **)malloc(file_LINES * sizeof(short int *));
-        for (int i = 0; i < file_LINES; i++)
+        map[level] = (short int **)malloc(lines * sizeof(short int *));
+        for (int i = 0; i < lines; i++)
         {
-            map[level][i] = (short int *)malloc(file_COLS * sizeof(short int));
+            map[level][i] = (short int *)malloc(cols * sizeof(short int));
         }
     }
 
     visibility_grid = (bool ***)malloc(MAX_LEVEL * sizeof(bool **));
     for (int level = 0; level < MAX_LEVEL; level++)
     {
-        visibility_grid[level] = (bool **)malloc(file_LINES * sizeof(bool *));
-        for (int i = 0; i < file_LINES; i++)
+        visibility_grid[level] = (bool **)malloc(lines * sizeof(bool *));
+        for (int i = 0; i < lines; i++)
         {
-            visibility_grid[level][i] = (bool *)malloc(file_COLS * sizeof(bool));
+            visibility_grid[level][i] = (bool *)malloc(cols * sizeof(bool));
         }
     }
-}
-
-void point_from_file(FILE *user_map, Point *point)
-{
-    fread(&(point->y), sizeof(int), 1, user_map);
-    fread(&(point->x), sizeof(int), 1, user_map);
-}
-
-void room_from_file(FILE *user_map, Room *room)
-{
-    fread(&(room->room_exist), sizeof(int), 1, user_map);
-    fread(&(room->discovered), sizeof(int), 1, user_map);
-    point_from_file(user_map, &(room->corner));
-    point_from_file(user_map, &(room->middle_door));
-    fread(&(room->door_num), sizeof(int), 1, user_map);
-    room->door = malloc(sizeof(Point) * room->door_num);
-    room->door_positions = malloc(sizeof(int) * room->door_num);
-    for (int i = 0; i < room->door_num; i++)
-    {
-        point_from_file(user_map, &(room->door[i]));
-        fread(&(room->door_positions[i]), sizeof(int), 1, user_map);
-    }
-    fread(&(room->room_position), sizeof(int), 1, user_map);
-    fread(&(room->window_num), sizeof(int), 1, user_map);
-    fread(room->window, sizeof(Point), room->window_num, user_map);
-    fread(&(room->pillar_num), sizeof(int), 1, user_map);
-    fread(room->pillar, sizeof(Point), room->pillar_num, user_map);
-    fread(&(room->length), sizeof(int), 1, user_map);
-    fread(&(room->width), sizeof(int), 1, user_map);
-    fread(&(room->type), sizeof(RoomType), 1, user_map);
-}
-
-void object_from_file(FILE *user_map, Object *object)
-{
-    fread(&(object->type), sizeof(ObjectType), 1, user_map);
-    point_from_file(user_map, &(object->location));
-    fread(&(object->visible), sizeof(int), 1, user_map);
-    fread(&(object->location_room), sizeof(int), 1, user_map);
-    fread(&(object->food_step_count), sizeof(int), 1, user_map);
-}
-
-void enemy_from_file(FILE *user_map, Enemy *enemy)
-{
-    point_from_file(user_map, &(enemy->location));
-    fread(&(enemy->health), sizeof(int), 1, user_map);
-    fread(&(enemy->damage), sizeof(int), 1, user_map);
-    fread(&(enemy->speed), sizeof(int), 1, user_map);
-    fread(&(enemy->follow), sizeof(int), 1, user_map);
-    fread(&(enemy->visible), sizeof(int), 1, user_map);
-    fread(&(enemy->location_room), sizeof(int), 1, user_map);
-    fread(&(enemy->stunned), sizeof(int), 1, user_map);
-    fread(&(enemy->type), sizeof(EnemyType), 1, user_map);
 }
 
 void free_level(Level *lvl)
@@ -371,98 +311,209 @@ void free_level(Level *lvl)
     }
 }
 
-int load_from_file(const char *filename, int level_index)
+void load_full_game_state(const char *filename)
 {
-    if (level_index < 0 || level_index >= MAX_LEVEL)
-    {
-        printf("Invalid level index: %d\n", level_index);
-        return 0;
-    }
-
-    FILE *file = fopen(filename, "rb");
+    FILE *file = fopen(filename, "r");
     if (!file)
     {
-        printf("Error: Could not open file %s\n", filename);
-        return 0;
+        perror("load_full_game_state: Failed to open file");
+        return;
     }
 
-    Level *lvl = &level[level_index];
-
-    // Free existing memory before overwriting
-    free_level(lvl);
-
-    // Read level data
-    if (fread(&lvl->level_num, sizeof(int), 1, file) != 1 ||
-        fread(&lvl->room_num, sizeof(int), 1, file) != 1 ||
-        fread(&lvl->discovered_room_num, sizeof(int), 1, file) != 1 ||
-        fread(lvl->between_doors_1, sizeof(Point), 12, file) != 12 ||
-        fread(lvl->between_doors_2, sizeof(Point), 12, file) != 12 ||
-        fread(lvl->corridor_exist, sizeof(int), 12, file) != 12 ||
-        fread(&lvl->object_num, sizeof(int), 1, file) != 1 ||
-        fread(&lvl->enemy_num, sizeof(int), 1, file) != 1)
+    int lines, cols;
+    if (fscanf(file, "LINES %d COLS %d\n", &lines, &cols) != 2)
     {
-        printf("Error: Corrupted file or unexpected end of file.\n");
+        fprintf(stderr, "Invalid file format: Missing dimensions\n");
         fclose(file);
-        return 0;
+        return;
     }
 
-    // Allocate memory for objects
-    if (lvl->object_num > 0)
+    free_map_and_visibility(lines);
+    allocate_map_and_visibility(lines, cols);
+
+    int current_level;
+    if (fscanf(file, "CURRENT_LEVEL %d\n", &current_level) != 1)
     {
-        lvl->objects = (Object *)malloc(sizeof(Object) * lvl->object_num);
-        if (!lvl->objects)
-        {
-            printf("Error: Memory allocation failed for objects.\n");
-            fclose(file);
-            return 0;
-        }
-        if (fread(lvl->objects, sizeof(Object), lvl->object_num, file) != (size_t)lvl->object_num)
-        {
-            printf("Error: Failed to read objects from file.\n");
-            free(lvl->objects);
-            lvl->objects = NULL;
-            fclose(file);
-            return 0;
-        }
-    }
-    else
-    {
-        lvl->objects = NULL;
+        fprintf(stderr, "Invalid file format: Missing current level\n");
+        fclose(file);
+        return;
     }
 
-    // Allocate memory for enemies
-    if (lvl->enemy_num > 0)
+    char buffer[256];
+    fgets(buffer, sizeof(buffer), file);
+    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
     {
-        lvl->enemies = (Enemy *)malloc(sizeof(Enemy) * lvl->enemy_num);
-        if (!lvl->enemies)
+        int check_level;
+        fscanf(file, "LEVEL_MAP %d\n", &check_level);
+        if (check_level != lvl)
         {
-            printf("Error: Memory allocation failed for enemies.\n");
-            free(lvl->objects); // Free objects if enemies allocation fails
+            fprintf(stderr, "Map level mismatch: expected %d got %d\n", lvl, check_level);
             fclose(file);
-            return 0;
+            return;
         }
-        if (fread(lvl->enemies, sizeof(Enemy), lvl->enemy_num, file) != (size_t)lvl->enemy_num)
+
+        for (int i = 0; i < lines; i++)
         {
-            printf("Error: Failed to read enemies from file.\n");
-            free(lvl->objects);
-            free(lvl->enemies);
-            lvl->objects = NULL;
-            lvl->enemies = NULL;
-            fclose(file);
-            return 0;
+            for (int j = 0; j < cols; j++)
+            {
+                fscanf(file, "%hd", &map[lvl][i][j]);
+            }
+            fscanf(file, "\n");
         }
     }
-    else
+    fgets(buffer, sizeof(buffer), file);
+
+    fgets(buffer, sizeof(buffer), file);
+    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
     {
-        lvl->enemies = NULL;
+        int check_level;
+        fscanf(file, "LEVEL_VISIBILITY %d\n", &check_level);
+        if (check_level != lvl)
+        {
+            fprintf(stderr, "Visibility level mismatch: expected %d got %d\n", lvl, check_level);
+            fclose(file);
+            return;
+        }
+
+        for (int i = 0; i < lines; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                int val;
+                fscanf(file, "%d", &val);
+                visibility_grid[lvl][i][j] = val ? true : false;
+            }
+            fscanf(file, "\n");
+        }
     }
+    fgets(buffer, sizeof(buffer), file);
+
+    fgets(buffer, sizeof(buffer), file);
+    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
+    {
+        Level *lev = &level[lvl];
+        free_level(lev);
+
+        int check_level;
+        fscanf(file, "LEVEL_DATA %d\n", &check_level);
+        if (check_level != lvl)
+        {
+            fprintf(stderr, "Level data mismatch: expected %d got %d\n", lvl, check_level);
+            fclose(file);
+            return;
+        }
+
+        fscanf(file, "level_num %d\n", &lev->level_num);
+        fscanf(file, "room_num %d\n", &lev->room_num);
+        fscanf(file, "discovered_room_num %d\n", &lev->discovered_room_num);
+
+        fgets(buffer, sizeof(buffer), file);
+        for (int r = 0; r < 9; r++)
+        {
+            Room *room = &lev->room[r];
+            int room_num;
+            fscanf(file, "ROOM %d\n", &room_num);
+
+            fscanf(file, "room_exist %d discovered %d\n", &room->room_exist, &room->discovered);
+            fscanf(file, "corner %d %d\n", &room->corner.y, &room->corner.x);
+            fscanf(file, "middle_door %d %d\n", &room->middle_door.y, &room->middle_door.x);
+            fscanf(file, "door_num %d\n", &room->door_num);
+
+            room->door = malloc(room->door_num * sizeof(Point));
+            room->door_positions = malloc(room->door_num * sizeof(int));
+
+            for (int d = 0; d < room->door_num; d++)
+            {
+                fscanf(file, "door %d %d\n", &room->door[d].y, &room->door[d].x);
+            }
+
+            fscanf(file, "door_positions");
+            for (int d = 0; d < room->door_num; d++)
+            {
+                fscanf(file, " %d", &room->door_positions[d]);
+            }
+            fscanf(file, "\n");
+
+            fscanf(file, "room_position %d\n", &room->room_position);
+            fscanf(file, "window_num %d\n", &room->window_num);
+            for (int w = 0; w < 4; w++)
+            {
+                fscanf(file, "window %d %d\n", &room->window[w].y, &room->window[w].x);
+            }
+            fscanf(file, "pillar_num %d\n", &room->pillar_num);
+            for (int p = 0; p < 2; p++)
+            {
+                fscanf(file, "pillar %d %d\n", &room->pillar[p].y, &room->pillar[p].x);
+            }
+            fscanf(file, "length %d width %d\n", &room->length, &room->width);
+            fscanf(file, "type %d\n", (int *)&room->type);
+            fgets(buffer, sizeof(buffer), file);
+        }
+        fgets(buffer, sizeof(buffer), file);
+
+        fgets(buffer, sizeof(buffer), file);
+        for (int i = 0; i < 12; i++)
+        {
+            fscanf(file, "%d %d\n", &lev->between_doors_1[i].y, &lev->between_doors_1[i].x);
+        }
+
+        fgets(buffer, sizeof(buffer), file);
+        for (int i = 0; i < 12; i++)
+        {
+            fscanf(file, "%d %d\n", &lev->between_doors_2[i].y, &lev->between_doors_2[i].x);
+        }
+
+        fscanf(file, "corridor_exist");
+        for (int i = 0; i < 12; i++)
+        {
+            fscanf(file, " %d", &lev->corridor_exist[i]);
+        }
+        fscanf(file, "\n");
+
+        fgets(buffer, sizeof(buffer), file);
+        fscanf(file, "object_num %d\n", &lev->object_num);
+        lev->objects = malloc(lev->object_num * sizeof(Object));
+        for (int o = 0; o < lev->object_num; o++)
+        {
+            Object *obj = &lev->objects[o];
+            int type;
+            fscanf(file, "object %d %d %d %d %d %d\n",
+                   &type, &obj->location.y, &obj->location.x,
+                   &obj->visible, &obj->location_room, &obj->food_step_count);
+            obj->type = (ObjectType)type;
+        }
+        fgets(buffer, sizeof(buffer), file);
+
+        fgets(buffer, sizeof(buffer), file);
+        fscanf(file, "enemy_num %d\n", &lev->enemy_num);
+        lev->enemies = malloc(lev->enemy_num * sizeof(Enemy));
+        for (int e = 0; e < lev->enemy_num; e++)
+        {
+            Enemy *en = &lev->enemies[e];
+            int type;
+            fscanf(file, "enemy %d %d %d %d %d %d %d %d %d %d\n",
+                   &en->location.y, &en->location.x, &en->health, &en->damage,
+                   &en->speed, &en->follow, &en->visible, &en->location_room,
+                   &en->stunned, &type);
+            en->type = (EnemyType)type;
+        }
+        fgets(buffer, sizeof(buffer), file);
+        fgets(buffer, sizeof(buffer), file);
+    }
+
+    fgets(buffer, sizeof(buffer), file);
+    fgets(buffer, sizeof(buffer), file);
 
     fclose(file);
-    return 1; // Successfully loaded
 }
+
+const char temp_user[] = "test_user";
+char *filename;
 
 int main()
 {
+    filename = generate_save_filename(temp_user, 1);
+
     setlocale(LC_ALL, "");
     srand(time(NULL));
 
@@ -484,8 +535,8 @@ int main()
 
     load_users_from_csv("users.csv", &game.users, &game.users_num);
 
-    initialize_visibility_grid();
-    initialize_map();
+    // initialize_visibility_grid();
+    // initialize_map();
 
     hero.health = 90, hero.coins = 0, hero.speed = 80, hero.satiety = 90, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
 
@@ -581,7 +632,7 @@ int main()
 
                 if (user_option_choice == 1) // continue_previous_game
                 {
-                    random_map();
+                    load_full_game_state(filename);
                     int level_num = 0;
                     while (1)
                     {
@@ -5436,6 +5487,16 @@ int run_game_level(int i)
                 refresh();
                 get_input = 0;
             }
+        }
+
+        if (input == 't' || input == 'T')
+        {
+            save_full_game_state(filename, i);
+            clear();
+            mvprintw(5, 5, "Game Saved");
+            refresh();
+            getch();
+            break;
         }
 
         if (input == 'k' || input == 'K')
