@@ -93,6 +93,374 @@ void jumpscare(const char *scary_music)
     play_playlist(global_playlist);
 }
 
+void generate_save_filename(const char *username, int current_game, char *filename, size_t size)
+{
+    // Format: username_currentGame.save
+    snprintf(filename, size, "%s_%d.save", username, current_game);
+}
+
+// Save the full game state (global map, visibility_grid, and level data)
+void save_full_game_state(const char *filename, int current_level, const Map *gameMap)
+{
+    FILE *file = fopen(filename, "w"); // overwrite the file
+    if (!file)
+    {
+        perror("save_full_game_state: Failed to open file");
+        return;
+    }
+
+    // Write header: dimensions and current level.
+    fprintf(file, "LINES %d COLS %d\n", LINES, COLS);
+    fprintf(file, "CURRENT_LEVEL %d\n", current_level);
+
+    // Write global map data.
+    fprintf(file, "GLOBAL_MAP\n");
+    for (int level = 0; level < MAX_LEVEL; level++)
+    {
+        fprintf(file, "LEVEL_MAP %d\n", level);
+        for (int i = 0; i < LINES; i++)
+        {
+            for (int j = 0; j < COLS; j++)
+            {
+                fprintf(file, "%d ", map[level][i][j]);
+            }
+            fprintf(file, "\n");
+        }
+    }
+    fprintf(file, "END_GLOBAL_MAP\n");
+
+    // Write global visibility data.
+    fprintf(file, "GLOBAL_VISIBILITY\n");
+    for (int level = 0; level < MAX_LEVEL; level++)
+    {
+        fprintf(file, "LEVEL_VISIBILITY %d\n", level);
+        for (int i = 0; i < LINES; i++)
+        {
+            for (int j = 0; j < COLS; j++)
+            {
+                fprintf(file, "%d ", visibility_grid[level][i][j] ? 1 : 0);
+            }
+            fprintf(file, "\n");
+        }
+    }
+    fprintf(file, "END_GLOBAL_VISIBILITY\n");
+
+    // Write full level data.
+    fprintf(file, "LEVEL_DATA_SECTION\n");
+    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
+    {
+        const Level *lev = &gameMap->levels[lvl];
+        fprintf(file, "LEVEL_DATA %d\n", lvl);
+        fprintf(file, "level_num %d\n", lev->level_num);
+        fprintf(file, "room_num %d\n", lev->room_num);
+        fprintf(file, "discovered_room_num %d\n", lev->discovered_room_num);
+
+        // Save room data.
+        fprintf(file, "ROOMS\n");
+        for (int r = 0; r < 9; r++)
+        {
+            const Room *rm = &lev->room[r];
+            fprintf(file, "ROOM %d\n", r);
+            fprintf(file, "room_exist %d discovered %d\n", rm->room_exist, rm->discovered);
+            fprintf(file, "corner %d %d\n", rm->corner.y, rm->corner.x);
+            fprintf(file, "middle_door %d %d\n", rm->middle_door.y, rm->middle_door.x);
+            fprintf(file, "door_num %d\n", rm->door_num);
+            for (int d = 0; d < rm->door_num; d++)
+            {
+                fprintf(file, "door %d %d\n", rm->door[d].y, rm->door[d].x);
+            }
+            fprintf(file, "door_positions");
+            for (int d = 0; d < rm->door_num; d++)
+            {
+                fprintf(file, " %d", rm->door_positions[d]);
+            }
+            fprintf(file, "\n");
+            fprintf(file, "room_position %d\n", rm->room_position);
+            fprintf(file, "window_num %d\n", rm->window_num);
+            for (int w = 0; w < 4; w++)
+            {
+                fprintf(file, "window %d %d\n", rm->window[w].y, rm->window[w].x);
+            }
+            fprintf(file, "pillar_num %d\n", rm->pillar_num);
+            for (int p = 0; p < 2; p++)
+            {
+                fprintf(file, "pillar %d %d\n", rm->pillar[p].y, rm->pillar[p].x);
+            }
+            fprintf(file, "length %d width %d\n", rm->length, rm->width);
+            fprintf(file, "type %d\n", rm->type);
+            fprintf(file, "END_ROOM\n");
+        }
+        fprintf(file, "END_ROOMS\n");
+
+        // Save between_doors arrays.
+        fprintf(file, "between_doors_1\n");
+        for (int i = 0; i < 12; i++)
+        {
+            fprintf(file, "%d %d\n", lev->between_doors_1[i].y, lev->between_doors_1[i].x);
+        }
+        fprintf(file, "between_doors_2\n");
+        for (int i = 0; i < 12; i++)
+        {
+            fprintf(file, "%d %d\n", lev->between_doors_2[i].y, lev->between_doors_2[i].x);
+        }
+        fprintf(file, "corridor_exist");
+        for (int i = 0; i < 12; i++)
+        {
+            fprintf(file, " %d", lev->corridor_exist[i]);
+        }
+        fprintf(file, "\n");
+
+        // Save objects.
+        fprintf(file, "OBJECTS\n");
+        fprintf(file, "object_num %d\n", lev->object_num);
+        for (int o = 0; o < lev->object_num; o++)
+        {
+            Object obj = lev->objects[o];
+            fprintf(file, "object %d %d %d %d %d %d\n",
+                    (int)obj.type, obj.location.y, obj.location.x,
+                    obj.visible, obj.location_room, obj.food_step_count);
+        }
+        fprintf(file, "END_OBJECTS\n");
+
+        // Save enemies.
+        fprintf(file, "ENEMIES\n");
+        fprintf(file, "enemy_num %d\n", lev->enemy_num);
+        for (int e = 0; e < lev->enemy_num; e++)
+        {
+            Enemy en = lev->enemies[e];
+            fprintf(file, "enemy %d %d %d %d %d %d %d %d %d %d\n",
+                    en.location.y, en.location.x, en.health, en.damage,
+                    en.speed, en.follow, en.visible, en.location_room,
+                    en.stunned, (int)en.type);
+        }
+        fprintf(file, "END_ENEMIES\n");
+
+        fprintf(file, "END_LEVEL_DATA\n");
+    }
+    fprintf(file, "END_LEVEL_DATA_SECTION\n");
+    fprintf(file, "END_SAVE\n");
+    fclose(file);
+}
+
+// Helper functions to free and allocate the global map and visibility_grid.
+void free_map_and_visibility()
+{
+    if (map)
+    {
+        for (int level = 0; level < MAX_LEVEL; level++)
+        {
+            if (map[level])
+            {
+                for (int i = 0; i < LINES; i++)
+                {
+                    free(map[level][i]);
+                }
+                free(map[level]);
+            }
+        }
+        free(map);
+        map = NULL;
+    }
+    if (visibility_grid)
+    {
+        for (int level = 0; level < MAX_LEVEL; level++)
+        {
+            if (visibility_grid[level])
+            {
+                for (int i = 0; i < LINES; i++)
+                {
+                    free(visibility_grid[level][i]);
+                }
+                free(visibility_grid[level]);
+            }
+        }
+        free(visibility_grid);
+        visibility_grid = NULL;
+    }
+}
+
+void allocate_map_and_visibility(int lines, int cols)
+{
+    int file_LINES = lines;
+    int file_COLS = cols;
+
+    map = (short int ***)malloc(MAX_LEVEL * sizeof(short int **));
+    for (int level = 0; level < MAX_LEVEL; level++)
+    {
+        map[level] = (short int **)malloc(file_LINES * sizeof(short int *));
+        for (int i = 0; i < file_LINES; i++)
+        {
+            map[level][i] = (short int *)malloc(file_COLS * sizeof(short int));
+        }
+    }
+
+    visibility_grid = (bool ***)malloc(MAX_LEVEL * sizeof(bool **));
+    for (int level = 0; level < MAX_LEVEL; level++)
+    {
+        visibility_grid[level] = (bool **)malloc(file_LINES * sizeof(bool *));
+        for (int i = 0; i < file_LINES; i++)
+        {
+            visibility_grid[level][i] = (bool *)malloc(file_COLS * sizeof(bool));
+        }
+    }
+}
+
+void point_from_file(FILE *user_map, Point *point)
+{
+    fread(&(point->y), sizeof(int), 1, user_map);
+    fread(&(point->x), sizeof(int), 1, user_map);
+}
+
+void room_from_file(FILE *user_map, Room *room)
+{
+    fread(&(room->room_exist), sizeof(int), 1, user_map);
+    fread(&(room->discovered), sizeof(int), 1, user_map);
+    point_from_file(user_map, &(room->corner));
+    point_from_file(user_map, &(room->middle_door));
+    fread(&(room->door_num), sizeof(int), 1, user_map);
+    room->door = malloc(sizeof(Point) * room->door_num);
+    room->door_positions = malloc(sizeof(int) * room->door_num);
+    for (int i = 0; i < room->door_num; i++)
+    {
+        point_from_file(user_map, &(room->door[i]));
+        fread(&(room->door_positions[i]), sizeof(int), 1, user_map);
+    }
+    fread(&(room->room_position), sizeof(int), 1, user_map);
+    fread(&(room->window_num), sizeof(int), 1, user_map);
+    fread(room->window, sizeof(Point), room->window_num, user_map);
+    fread(&(room->pillar_num), sizeof(int), 1, user_map);
+    fread(room->pillar, sizeof(Point), room->pillar_num, user_map);
+    fread(&(room->length), sizeof(int), 1, user_map);
+    fread(&(room->width), sizeof(int), 1, user_map);
+    fread(&(room->type), sizeof(RoomType), 1, user_map);
+}
+
+void object_from_file(FILE *user_map, Object *object)
+{
+    fread(&(object->type), sizeof(ObjectType), 1, user_map);
+    point_from_file(user_map, &(object->location));
+    fread(&(object->visible), sizeof(int), 1, user_map);
+    fread(&(object->location_room), sizeof(int), 1, user_map);
+    fread(&(object->food_step_count), sizeof(int), 1, user_map);
+}
+
+void enemy_from_file(FILE *user_map, Enemy *enemy)
+{
+    point_from_file(user_map, &(enemy->location));
+    fread(&(enemy->health), sizeof(int), 1, user_map);
+    fread(&(enemy->damage), sizeof(int), 1, user_map);
+    fread(&(enemy->speed), sizeof(int), 1, user_map);
+    fread(&(enemy->follow), sizeof(int), 1, user_map);
+    fread(&(enemy->visible), sizeof(int), 1, user_map);
+    fread(&(enemy->location_room), sizeof(int), 1, user_map);
+    fread(&(enemy->stunned), sizeof(int), 1, user_map);
+    fread(&(enemy->type), sizeof(EnemyType), 1, user_map);
+}
+
+void free_level(Level *lvl)
+{
+    if (lvl->objects)
+    {
+        free(lvl->objects);
+        lvl->objects = NULL;
+    }
+    if (lvl->enemies)
+    {
+        free(lvl->enemies);
+        lvl->enemies = NULL;
+    }
+}
+
+int load_from_file(const char *filename, int level_index)
+{
+    if (level_index < 0 || level_index >= MAX_LEVEL)
+    {
+        printf("Invalid level index: %d\n", level_index);
+        return 0;
+    }
+
+    FILE *file = fopen(filename, "rb");
+    if (!file)
+    {
+        printf("Error: Could not open file %s\n", filename);
+        return 0;
+    }
+
+    Level *lvl = &level[level_index];
+
+    // Free existing memory before overwriting
+    free_level(lvl);
+
+    // Read level data
+    if (fread(&lvl->level_num, sizeof(int), 1, file) != 1 ||
+        fread(&lvl->room_num, sizeof(int), 1, file) != 1 ||
+        fread(&lvl->discovered_room_num, sizeof(int), 1, file) != 1 ||
+        fread(lvl->between_doors_1, sizeof(Point), 12, file) != 12 ||
+        fread(lvl->between_doors_2, sizeof(Point), 12, file) != 12 ||
+        fread(lvl->corridor_exist, sizeof(int), 12, file) != 12 ||
+        fread(&lvl->object_num, sizeof(int), 1, file) != 1 ||
+        fread(&lvl->enemy_num, sizeof(int), 1, file) != 1)
+    {
+        printf("Error: Corrupted file or unexpected end of file.\n");
+        fclose(file);
+        return 0;
+    }
+
+    // Allocate memory for objects
+    if (lvl->object_num > 0)
+    {
+        lvl->objects = (Object *)malloc(sizeof(Object) * lvl->object_num);
+        if (!lvl->objects)
+        {
+            printf("Error: Memory allocation failed for objects.\n");
+            fclose(file);
+            return 0;
+        }
+        if (fread(lvl->objects, sizeof(Object), lvl->object_num, file) != (size_t)lvl->object_num)
+        {
+            printf("Error: Failed to read objects from file.\n");
+            free(lvl->objects);
+            lvl->objects = NULL;
+            fclose(file);
+            return 0;
+        }
+    }
+    else
+    {
+        lvl->objects = NULL;
+    }
+
+    // Allocate memory for enemies
+    if (lvl->enemy_num > 0)
+    {
+        lvl->enemies = (Enemy *)malloc(sizeof(Enemy) * lvl->enemy_num);
+        if (!lvl->enemies)
+        {
+            printf("Error: Memory allocation failed for enemies.\n");
+            free(lvl->objects); // Free objects if enemies allocation fails
+            fclose(file);
+            return 0;
+        }
+        if (fread(lvl->enemies, sizeof(Enemy), lvl->enemy_num, file) != (size_t)lvl->enemy_num)
+        {
+            printf("Error: Failed to read enemies from file.\n");
+            free(lvl->objects);
+            free(lvl->enemies);
+            lvl->objects = NULL;
+            lvl->enemies = NULL;
+            fclose(file);
+            return 0;
+        }
+    }
+    else
+    {
+        lvl->enemies = NULL;
+    }
+
+    fclose(file);
+    return 1; // Successfully loaded
+}
+
 int main()
 {
     setlocale(LC_ALL, "");
@@ -3662,152 +4030,6 @@ void level_to_file(char *file_name, int level_num)
         fprintf(user_map, "\n");
         fclose(user_map);
     }
-}
-
-void load_level_from_file(char *file_name, int level_num)
-{
-    FILE *user_map = fopen(file_name, "r");
-
-    if (user_map == NULL)
-    {
-        perror("Error opening file");
-        return;
-    }
-
-    char file_line[1024];
-    int file_level_num;
-    int room_num, discovered_room_num, object_num, room_exist, discovered, corner_y, corner_x, width, length, middle_door_y, middle_door_x, room_position, door_num;
-    int door_positions[10], door_y[10], door_x[10];
-    Point between_doors_1[12], between_doors_2[12];
-    int corridor_exist[12];
-    Object *file_objects;
-
-    int level_count = find_level_num_from_file(file_name, level_num);
-    for (int i = 0; i < (14 * level_count); i++)
-        fgets(file_line, sizeof(file_line), user_map);
-
-    // Search for the specific level in the file
-    fgets(file_line, sizeof(file_line), user_map);
-    sscanf(file_line, "%d,%d,%d,%d\n", &file_level_num, &room_num, &discovered_room_num, &object_num);
-
-    level[level_num].room_num = room_num;
-    level[level_num].discovered_room_num = discovered_room_num;
-    level[level_num].object_num = object_num;
-
-    // Read rooms
-    for (int i = 0; i < 9; i++)
-    {
-        fgets(file_line, sizeof(file_line), user_map);
-        sscanf(file_line, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", &file_level_num, &i, &room_exist, &discovered, &corner_y, &corner_x,
-               &width, &length, &middle_door_y, &middle_door_x, &room_position, &door_num);
-        level[level_num].room[i].room_exist = room_exist;
-        level[level_num].room[i].discovered = discovered;
-        level[level_num].room[i].corner.y = corner_y;
-        level[level_num].room[i].corner.x = corner_x;
-        level[level_num].room[i].width = width;
-        level[level_num].room[i].length = length;
-        level[level_num].room[i].middle_door.y = middle_door_y;
-        level[level_num].room[i].middle_door.x = middle_door_x;
-        level[level_num].room[i].room_position = room_position;
-        level[level_num].room[i].door_num = door_num;
-
-        char *token = strtok(file_line, ",");
-        for (int j = 0; j < 12; j++) // Skip the first 12 tokens (already parsed)
-        {
-            token = strtok(NULL, ",");
-        }
-        for (int j = 0; j < door_num; j++)
-        {
-            door_positions[j] = atoi(token);
-            token = strtok(NULL, ",");
-            door_y[j] = atoi(token);
-            token = strtok(NULL, ",");
-            door_x[j] = atoi(token);
-            token = strtok(NULL, ",");
-
-            level[level_num].room[i].door_positions[j] = door_positions[j];
-            level[level_num].room[i].door[j].y = door_y[j];
-            level[level_num].room[i].door[j].x = door_x[j];
-        }
-    }
-
-    fgets(file_line, sizeof(file_line), user_map);
-    sscanf(file_line, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,",
-           &between_doors_1[0].y, &between_doors_1[0].x,
-           &between_doors_1[1].y, &between_doors_1[1].x,
-           &between_doors_1[2].y, &between_doors_1[2].x,
-           &between_doors_1[3].y, &between_doors_1[3].x,
-           &between_doors_1[4].y, &between_doors_1[4].x,
-           &between_doors_1[5].y, &between_doors_1[5].x,
-           &between_doors_1[6].y, &between_doors_1[6].x,
-           &between_doors_1[7].y, &between_doors_1[7].x,
-           &between_doors_1[8].y, &between_doors_1[8].x,
-           &between_doors_1[9].y, &between_doors_1[9].x,
-           &between_doors_1[10].y, &between_doors_1[10].x,
-           &between_doors_1[11].y, &between_doors_1[11].x);
-    for (int i = 0; i < 12; i++)
-    {
-        level[level_num].between_doors_1[i].y = between_doors_1[i].y;
-        level[level_num].between_doors_1[i].x = between_doors_1[i].x;
-    }
-
-    fgets(file_line, sizeof(file_line), user_map);
-    sscanf(file_line, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,",
-           &between_doors_2[0].y, &between_doors_2[0].x,
-           &between_doors_2[1].y, &between_doors_2[1].x,
-           &between_doors_2[2].y, &between_doors_2[2].x,
-           &between_doors_2[3].y, &between_doors_2[3].x,
-           &between_doors_2[4].y, &between_doors_2[4].x,
-           &between_doors_2[5].y, &between_doors_2[5].x,
-           &between_doors_2[6].y, &between_doors_2[6].x,
-           &between_doors_2[7].y, &between_doors_2[7].x,
-           &between_doors_2[8].y, &between_doors_2[8].x,
-           &between_doors_2[9].y, &between_doors_2[9].x,
-           &between_doors_2[10].y, &between_doors_2[10].x,
-           &between_doors_2[11].y, &between_doors_2[11].x);
-    for (int i = 0; i < 12; i++)
-    {
-        level[level_num].between_doors_2[i].y = between_doors_2[i].y;
-        level[level_num].between_doors_2[i].x = between_doors_2[i].x;
-    }
-
-    fgets(file_line, sizeof(file_line), user_map);
-    sscanf(file_line, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,",
-           &corridor_exist[0], &corridor_exist[1],
-           &corridor_exist[2], &corridor_exist[3],
-           &corridor_exist[4], &corridor_exist[5],
-           &corridor_exist[6], &corridor_exist[7],
-           &corridor_exist[8], &corridor_exist[9],
-           &corridor_exist[10], &corridor_exist[11]);
-    for (int i = 0; i < 12; i++)
-    {
-        level[level_num].corridor_exist[i] = corridor_exist[i];
-    }
-
-    file_objects = (Object *)malloc(object_num * sizeof(Object));
-    level[level_num].objects = (Object *)malloc(object_num * sizeof(Object));
-    fgets(file_line, sizeof(file_line), user_map);
-    char *token = strtok(file_line, ",");
-    for (int i = 0; i < object_num; i++)
-    {
-        if (token != NULL)
-            level[level_num].objects[i].type = (ObjectType)atoi(token);
-        token = strtok(NULL, ",");
-        if (token != NULL)
-            level[level_num].objects[i].location.y = atoi(token);
-        token = strtok(NULL, ",");
-        if (token != NULL)
-            level[level_num].objects[i].location.x = atoi(token);
-        token = strtok(NULL, ",");
-        if (token != NULL)
-            level[level_num].objects[i].visible = atoi(token);
-        token = strtok(NULL, ",");
-        if (token != NULL)
-            level[level_num].objects[i].location_room = atoi(token);
-        token = strtok(NULL, ",");
-    }
-
-    fclose(user_map);
 }
 
 int find_level_num_from_file(char *file_name, int level_num)
