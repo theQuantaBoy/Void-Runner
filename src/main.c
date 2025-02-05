@@ -137,6 +137,7 @@ int main()
                             show_death_screen();
                             current_user.game_num += 1;
                             current_user.current_game = 0;
+                            current_user.total_score += hero.coins;
                             break;
                         }
 
@@ -146,18 +147,21 @@ int main()
                             current_user.game_num += 1;
                             current_user.win_num += 1;
                             current_user.current_game = 0;
+                            current_user.total_score += hero.coins;
                             break;
                         }
 
                         else if (level_num == -3)
                         {
                             current_user.current_game = 1;
+                            current_user.total_score += hero.coins;
                             break;
                         }
 
                         else if (level_num == -1)
                         {
                             current_user.current_game = 0;
+                            current_user.total_score += hero.coins;
                             break;
                         }
                     }
@@ -197,6 +201,7 @@ int main()
                                 show_death_screen();
                                 current_user.game_num += 1;
                                 current_user.current_game = 0;
+                                current_user.total_score += hero.coins;
                                 break;
                             }
 
@@ -206,18 +211,21 @@ int main()
                                 current_user.game_num += 1;
                                 current_user.win_num += 1;
                                 current_user.current_game = 0;
+                                current_user.total_score += hero.coins;
                                 break;
                             }
 
                             else if (level_num == -3)
                             {
                                 current_user.current_game = 1;
+                                current_user.total_score += hero.coins;
                                 break;
                             }
 
                             else if (level_num == -1)
                             {
                                 current_user.current_game = 0;
+                                current_user.total_score += hero.coins;
                                 break;
                             }
                         }
@@ -5248,11 +5256,29 @@ int run_game_level(int i)
 
         hero.satiety_progress += 1;
 
+        if (hero.speed == 1)
+            hero.speed_progress += 1;
+
+        if (her0.damage == 1)
+            hero.damage_progress += 1;
+
         if (hero.satiety_progress == (2000 / current_user.difficulty))
         {
             if (hero.satiety >= 5)
                 hero.satiety -= 5;
             hero.satiety_progress = 0;
+        }
+
+        if (hero.speed == 1 && hero.speed_progress == (2000 / current_user.difficulty))
+        {
+            hero.speed = 0;
+            hero.speed_progress = 0;
+        }
+
+        if (hero.damage == 1 && hero.damage_progress == (2000 / current_user.difficulty))
+        {
+            hero.damage = 0;
+            hero.damage_progress = 0;
         }
 
         handle_enemies_movement(i);
