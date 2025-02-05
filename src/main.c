@@ -1105,6 +1105,7 @@ void create_treasure_room_objects()
         level[level_num].enemies[enemy_count].visible = 1;
         level[level_num].enemies[enemy_count].location_room = find_room(level_num, level[level_num].enemies[enemy_count].location);
         map[level_num][level[level_num].enemies[enemy_count].location.y][level[level_num].enemies[enemy_count].location.x] = level[level_num].enemies[enemy_count].type + 22;
+        level[level_num].enemies[enemy_count].stunned = 0;
         enemy_count += 1;
     }
 
@@ -1115,6 +1116,7 @@ void create_treasure_room_objects()
         level[level_num].enemies[enemy_count].visible = 1;
         level[level_num].enemies[enemy_count].location_room = find_room(level_num, level[level_num].enemies[enemy_count].location);
         map[level_num][level[level_num].enemies[enemy_count].location.y][level[level_num].enemies[enemy_count].location.x] = level[level_num].enemies[enemy_count].type + 22;
+        level[level_num].enemies[enemy_count].stunned = 0;
         enemy_count += 1;
     }
 
@@ -1125,6 +1127,7 @@ void create_treasure_room_objects()
         level[level_num].enemies[enemy_count].visible = 1;
         level[level_num].enemies[enemy_count].location_room = find_room(level_num, level[level_num].enemies[enemy_count].location);
         map[level_num][level[level_num].enemies[enemy_count].location.y][level[level_num].enemies[enemy_count].location.x] = level[level_num].enemies[enemy_count].type + 22;
+        level[level_num].enemies[enemy_count].stunned = 0;
         enemy_count += 1;
     }
 
@@ -1135,6 +1138,7 @@ void create_treasure_room_objects()
         level[level_num].enemies[enemy_count].visible = 1;
         level[level_num].enemies[enemy_count].location_room = find_room(level_num, level[level_num].enemies[enemy_count].location);
         map[level_num][level[level_num].enemies[enemy_count].location.y][level[level_num].enemies[enemy_count].location.x] = level[level_num].enemies[enemy_count].type + 22;
+        level[level_num].enemies[enemy_count].stunned = 0;
         enemy_count += 1;
     }
 
@@ -1145,6 +1149,7 @@ void create_treasure_room_objects()
         level[level_num].enemies[enemy_count].visible = 1;
         level[level_num].enemies[enemy_count].location_room = find_room(level_num, level[level_num].enemies[enemy_count].location);
         map[level_num][level[level_num].enemies[enemy_count].location.y][level[level_num].enemies[enemy_count].location.x] = level[level_num].enemies[enemy_count].type + 22;
+        level[level_num].enemies[enemy_count].stunned = 0;
         enemy_count += 1;
     }
 
