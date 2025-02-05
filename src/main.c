@@ -3043,7 +3043,7 @@ void show_spell_inventory(int level_num)
                         }
                     }
 
-                    hero.health = 1;
+                    hero.health = 100;
                     remove_spell_from_inventory(health_index);
                 }
             }
@@ -5259,7 +5259,7 @@ int run_game_level(int i)
         if (hero.speed == 1)
             hero.speed_progress += 1;
 
-        if (her0.damage == 1)
+        if (hero.damage == 1)
             hero.damage_progress += 1;
 
         if (hero.satiety_progress == (2000 / current_user.difficulty))
@@ -6484,12 +6484,12 @@ void update_food_status()
 
     for (int i = 0; i < hero.food_num; i++)
     {
-        if (hero.food_inventory[i].type == GourmetFood && hero.food_inventory[i].food_step_count == 30)
+        if (hero.food_inventory[i].type == GourmetFood && hero.food_inventory[i].food_step_count == 90)
         {
             hero.food_inventory[i].type = NormalFood;
             hero.food_inventory[i].food_step_count = 0;
         }
-        if (hero.food_inventory[i].type == NormalFood && hero.food_inventory[i].food_step_count == 30)
+        if (hero.food_inventory[i].type == NormalFood && hero.food_inventory[i].food_step_count == 90)
         {
             hero.food_inventory[i].type = PoisonFood;
             hero.food_inventory[i].food_step_count = 0;
@@ -6502,7 +6502,7 @@ void show_death_screen()
     erase();
     draw_border();
     for (int i = 0; i < 33; i++)
-        mvprintw(LINES - 33 + i, (COLS / 2) - 31, "%s", tombstone[i]);
+        mvprintw(LINES - 34 + i, (COLS / 2) - 31, "%s", tombstone[i]);
     mvprintw(LINES - 40, ((COLS / 2) - 26), "Sorry, you Lost. I know you can do better next time!");
     mvprintw(LINES - 38, ((COLS / 2) - 12), "- Press X to continue -");
     while (1)

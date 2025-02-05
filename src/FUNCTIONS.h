@@ -12,7 +12,7 @@
 #define MIN_ROOM_RATIO 0.6
 
 #define VISIBILITY_RADIUS 3
-#define MAX_LEVEL 2
+#define MAX_LEVEL 4
 #define MAX_OBJECT 50
 
 #define MIN_NORMAL_FOOD 5
