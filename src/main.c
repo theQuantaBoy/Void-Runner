@@ -438,7 +438,6 @@ void random_map()
         create_enemies(i);
         level[i].level_num = i;
         determine_room_types(i);
-        level_to_file("test.csv", i);
     }
 
     treasure_level();
@@ -446,7 +445,6 @@ void random_map()
     level[MAX_LEVEL - 1].object_num = 0;
     create_treasure_room_objects();
     level[MAX_LEVEL - 1].level_num = MAX_LEVEL - 1;
-    level_to_file("test.csv", MAX_LEVEL - 1);
 }
 
 void random_room(int y_min, int y_max, int x_min, int x_max, Room *room)
@@ -4745,7 +4743,6 @@ void user_settings_menu()
 
 int run_game_level(int i)
 {
-    // load_level_from_file("test.csv", i);
     initialize_hero(i);
 
     while (1)
