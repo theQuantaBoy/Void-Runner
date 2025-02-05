@@ -561,9 +561,6 @@ int main()
 
     load_users_from_csv("users.csv", &game.users, &game.users_num);
 
-    initialize_visibility_grid();
-    initialize_map();
-
     if (can_change_color())
     {
         start_color();
@@ -574,22 +571,6 @@ int main()
         init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
         init_pair(6, COLOR_RED, COLOR_BLACK);
         init_pair(7, COLOR_YELLOW, COLOR_BLACK);
-
-        init_color(COLOR_YELLOW + 1, 255, 170, 29); // Gold
-        init_pair(8, COLOR_YELLOW + 1, COLOR_BLACK);
-
-        init_color(COLOR_WHITE + 1, 753, 753, 753); // Silver/Metal color
-        init_pair(9, COLOR_WHITE + 1, COLOR_BLACK);
-
-        init_color(COLOR_RED + 10, 1000, 714, 757); // Light Red
-        init_color(COLOR_RED + 20, 1000, 0, 0);     // Red
-        init_color(COLOR_RED + 30, 545, 0, 0);      // Dark Red
-        init_color(COLOR_RED + 40, 300, 0, 0);      // Darker Red
-
-        init_pair(10, COLOR_RED + 10, COLOR_BLACK); // Light Red
-        init_pair(11, COLOR_RED + 20, COLOR_BLACK); // Red
-        init_pair(12, COLOR_RED + 30, COLOR_BLACK); // Dark Red
-        init_pair(13, COLOR_RED + 40, COLOR_BLACK); // Darker Red
     }
 
     noecho();
@@ -675,13 +656,14 @@ int main()
                         }
                     }
 
+                    free_map_and_visibility(LINES);
                     save_user_to_csv("users.csv", &current_user);
                     break;
                 }
 
                 if (user_option_choice == 1) // continue_previous_game
                 {
-                    if (current_user.current_game = 1)
+                    if (current_user.current_game == 1)
                     {
                         hero.health = 100, hero.coins = 0, hero.speed = 80, hero.satiety = 100, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
 
@@ -695,7 +677,7 @@ int main()
                         hero.spell_inventory = (Object *)malloc(MAX_SPELL * sizeof(Object));
                         hero.spell_num = 0;
 
-                        load_full_game_state(generate_save_filename(current_user.username, current_user.current_game));
+                        load_full_game_state(generate_save_filename(current_user.username, current_user.game_num));
 
                         int level_num = 0;
                         while (1)
@@ -733,8 +715,14 @@ int main()
                             }
                         }
 
+                        free_map_and_visibility(LINES);
                         save_user_to_csv("users.csv", &current_user);
                         break;
+                    }
+
+                    else
+                    {
+                        show_no_save_screen();
                     }
                 }
 
@@ -814,6 +802,7 @@ int main()
                 }
             }
 
+            free_map_and_visibility(LINES);
             save_user_to_csv("users.csv", &current_user);
             break;
         }
@@ -912,6 +901,8 @@ int *extra_corridors()
 
 void random_map()
 {
+    initialize_visibility_grid();
+    initialize_map();
     for (int i = 0; i < MAX_LEVEL - 1; i++)
     {
         random_level(i);
@@ -1735,10 +1726,16 @@ void print_room(int level_num, int room_num)
             {
                 if (room_num == hero.location_room)
                 {
-                    attron(COLOR_PAIR(4));
+                    if (level[level_num].room[room_num].type == Nightmare)
+                        attron(COLOR_PAIR(6));
+                    else
+                        attron(COLOR_PAIR(4));
                     if (visibility_grid[level_num][y + j][x + i] == 1)
                         mvprintw(y + j, x + i, "·"); // middle dot - ASCII Number: 183
-                    attroff(COLOR_PAIR(4));
+                    if (level[level_num].room[room_num].type == Nightmare)
+                        attroff(COLOR_PAIR(6));
+                    else
+                        attroff(COLOR_PAIR(4));
                 }
             }
             attron(COLOR_PAIR(6));
@@ -3672,7 +3669,7 @@ void show_current_weapon()
 void print_entire_map(int level_num)
 {
     erase();
-    print_message("Map", "Press 'q' to close map.");
+    print_message("Map", "Press 'm' to close map.");
     for (int i = 0; i < 9; i++)
         print_entire_room(level_num, i);
 
@@ -3681,7 +3678,7 @@ void print_entire_map(int level_num)
     while (1)
     {
         int temp = getch();
-        if (temp == 'q')
+        if (temp == 'm' || temp == 'M')
             break;
     }
 
@@ -3707,9 +3704,15 @@ void print_entire_room(int level_num, int room_num)
             attroff(COLOR_PAIR(6));
             for (int j = 1; j < width + 1; j++)
             {
-                attron(COLOR_PAIR(4));
+                if (level[level_num].room[room_num].type == Nightmare)
+                    attron(COLOR_PAIR(6));
+                else
+                    attron(COLOR_PAIR(4));
                 mvprintw(y + j, x + i, "·"); // middle dot - ASCII Number: 183
-                attroff(COLOR_PAIR(4));
+                if (level[level_num].room[room_num].type == Nightmare)
+                    attroff(COLOR_PAIR(6));
+                else
+                    attroff(COLOR_PAIR(4));
             }
             attron(COLOR_PAIR(6));
             mvprintw(y + width + 1, x + i, "═");
@@ -4802,7 +4805,6 @@ int find_user_index_from_email(const char *email)
     return -1;
 }
 
-// Updated continue_game_screen function
 void continue_game_screen()
 {
     char username[26] = {};
@@ -5214,7 +5216,7 @@ int run_game_level(int i)
                 print_message("You found the staircase!", "You can use < and > keys to go to other levels.");
                 input = getch();
 
-                if (input == '>')
+                if (input == '>' || input == '.')
                 {
                     move(LINES - 5, 0);
                     clrtoeol();
@@ -5222,7 +5224,7 @@ int run_game_level(int i)
                     return i + 1;
                 }
 
-                if (input == '<')
+                if (input == '<' || input == ',')
                 {
                     move(LINES - 5, 0);
                     clrtoeol();
@@ -5592,8 +5594,11 @@ int run_game_level(int i)
         }
 
         if (input == 'f' || input == 'F')
+        {
+            print_message("You ended this game.", "Press any ket...");
+            refresh();
             return -1;
-
+        }
         if (input == 'k' || input == 'K')
         {
             switch (hero.current_weapon.type)
@@ -6892,6 +6897,7 @@ void update_food_status()
 void show_death_screen()
 {
     erase();
+    draw_border();
     // for (int i = 0; i < 33; i++)
     //     mvprintw(LINES - 33 + i, (COLS / 2) - 31, "%s", tombstone[i]);
     mvprintw(LINES - 40, ((COLS / 2) - 26), "Sorry, you Lost. I know you can do better next time!");
@@ -6902,6 +6908,7 @@ void show_death_screen()
 void show_win_screen()
 {
     erase();
+    draw_border();
     // for (int i = 0; i < 34; i++)
     //     mvprintw(LINES - 34 + i, (COLS / 2) - 33, "%s", tombstone[i]);
     mvprintw(LINES - 40, ((COLS / 2) - 23), "Congrats, you won. You are officially amazing!");
@@ -6930,4 +6937,13 @@ void play_playlist(int playlist_num)
         Mix_PlayMusic(music, 0);
         current_track += 1;
     }
+}
+
+void show_no_save_screen()
+{
+    erase();
+    draw_border();
+    mvprintw(LINES - 40, ((COLS / 2) - 25), "Sorry, you don't currently have any saved games :(");
+    mvprintw(LINES - 38, ((COLS / 2) - 9), "- Press any key -");
+    getch();
 }

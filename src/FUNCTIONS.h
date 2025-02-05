@@ -461,6 +461,7 @@ void determine_room_types(int level_num);
 
 void show_death_screen();
 void show_win_screen();
+void show_no_save_screen();
 
 int find_user_index_from_username(const char *username);
 int find_user_index_from_email(const char *email);
