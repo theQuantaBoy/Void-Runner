@@ -6,7 +6,10 @@ Developer: Mohsen Salah
 
 Student ID: 403106238
 
-SUT 2024-2025!
+SUT 2024-2025
+
+You can use this command to compile the main.c file:
+"gcc main.c -lncursesw -lSDL2 -lSDL2_mixer -o main"
 
 [Game Title](/screenshots/title.png)
 
