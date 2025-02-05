@@ -1201,8 +1201,10 @@ void create_treasure_room_objects()
     int speed_spell_num = (rand() % 2) + 0;
     int damage_spell_num = (rand() % 2) + 0;
 
-    int object_num = normal_food_num + gourmet_food_num + magic_food_num + coin_num + black_coin_num + health_spell_num + speed_spell_num + damage_spell_num;
+    int object_num = normal_food_num + gourmet_food_num + magic_food_num + coin_num + black_coin_num + health_spell_num + speed_spell_num + damage_spell_num + 1;
     level[level_num].objects = (Object *)malloc(object_num * sizeof(Object));
+
+    spawn_object(level_num, Staircase);
 
     for (int i = 0; i < normal_food_num; i++)
         spawn_object(level_num, NormalFood);
@@ -6521,7 +6523,7 @@ void show_win_screen()
     erase();
     draw_border();
     for (int i = 0; i < 34; i++)
-        mvprintw(LINES - 29 + i, (COLS / 2) - 33, "%s", tombstone[i]);
+        mvprintw(LINES - 29 + i, (COLS / 2) - 33, "%s", trophy[i]);
     mvprintw(LINES - 40, ((COLS / 2) - 23), "Congrats, you won. You are officially amazing!");
     mvprintw(LINES - 38, ((COLS / 2) - 12), "- Press X to continue -");
     while (1)
