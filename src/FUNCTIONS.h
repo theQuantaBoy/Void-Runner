@@ -253,6 +253,8 @@ typedef struct
     int satiety;
     int health_progress;
     int satiety_progress;
+    int speed_progress;
+    int damage_progress;
 
     Object *food_inventory;
     Object *weapon_inventory;
@@ -465,5 +467,24 @@ void show_no_save_screen();
 
 int find_user_index_from_username(const char *username);
 int find_user_index_from_email(const char *email);
+
+void draw_profile_menu();
+
+void music_finished_callback(void);
+
+void play_specific_track(const char *track, const char **playlist);
+void jumpscare(const char *scary_music);
+
+char *generate_save_filename(const char *username, int current_game);
+
+void save_full_game_state(const char *filename, int current_level);
+
+void free_map_and_visibility(int lines);
+
+void allocate_map_and_visibility(int lines, int cols);
+
+void free_level(Level *lvl);
+
+void load_full_game_state(const char *filename);
 
 #endif

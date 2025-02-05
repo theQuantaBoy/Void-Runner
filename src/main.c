@@ -41,505 +41,8 @@ int enemy_index = -1;
 
 int global_playlist;
 
-void music_finished_callback(void)
-{
-    play_playlist(global_playlist);
-}
-
-void play_specific_track(const char *track, const char **playlist)
-{
-    if (current_user.play_music == 1)
-    {
-        if (Mix_PlayingMusic())
-        {
-            Mix_HaltMusic();
-        }
-
-        Mix_Music *music = Mix_LoadMUS(track);
-        if (!music)
-        {
-            fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
-            return;
-        }
-
-        Mix_PlayMusic(music, 0);
-
-        while (Mix_PlayingMusic())
-        {
-            SDL_Delay(100);
-        }
-    }
-}
-
-void jumpscare(const char *scary_music)
-{
-    if (Mix_PlayingMusic())
-    {
-        Mix_HaltMusic();
-    }
-
-    Mix_Music *music = Mix_LoadMUS(scary_music);
-    if (!music)
-    {
-        fprintf(stderr, "Failed to load jump scare music! SDL_mixer Error: %s\n", Mix_GetError());
-        return;
-    }
-    Mix_PlayMusic(music, 0);
-
-    erase();
-    golden_freddy_appear();
-    refresh();
-
-    SDL_Delay(5000);
-
-    erase();
-    refresh();
-
-    play_playlist(global_playlist);
-}
-
-char *generate_save_filename(const char *username, int current_game)
-{
-    if (mkdir("save", 0755) == -1 && errno != EEXIST)
-    {
-        perror("mkdir save");
-        return NULL;
-    }
-
-    char dir_path[256];
-    snprintf(dir_path, sizeof(dir_path), "save/%s", username);
-    if (mkdir(dir_path, 0755) == -1 && errno != EEXIST)
-    {
-        perror("mkdir username directory");
-        return NULL;
-    }
-
-    size_t size = snprintf(NULL, 0, "save/%s/%s_%d.save", username, username, current_game) + 1;
-    char *filename = malloc(size);
-    if (!filename)
-        return NULL;
-
-    snprintf(filename, size, "save/%s/%s_%d.save", username, username, current_game);
-    return filename;
-}
-
-void save_full_game_state(const char *filename, int current_level)
-{
-    FILE *file = fopen(filename, "w");
-    if (!file)
-    {
-        perror("save_full_game_state: Failed to open file");
-        return;
-    }
-
-    fprintf(file, "LINES %d COLS %d\n", LINES, COLS);
-    fprintf(file, "CURRENT_LEVEL %d\n", current_level);
-
-    fprintf(file, "GLOBAL_MAP\n");
-    for (int level = 0; level < MAX_LEVEL; level++)
-    {
-        fprintf(file, "LEVEL_MAP %d\n", level);
-        for (int i = 0; i < LINES; i++)
-        {
-            for (int j = 0; j < COLS; j++)
-            {
-                fprintf(file, "%d ", map[level][i][j]);
-            }
-            fprintf(file, "\n");
-        }
-    }
-    fprintf(file, "END_GLOBAL_MAP\n");
-
-    fprintf(file, "GLOBAL_VISIBILITY\n");
-    for (int level = 0; level < MAX_LEVEL; level++)
-    {
-        fprintf(file, "LEVEL_VISIBILITY %d\n", level);
-        for (int i = 0; i < LINES; i++)
-        {
-            for (int j = 0; j < COLS; j++)
-            {
-                fprintf(file, "%d ", visibility_grid[level][i][j] ? 1 : 0);
-            }
-            fprintf(file, "\n");
-        }
-    }
-    fprintf(file, "END_GLOBAL_VISIBILITY\n");
-
-    fprintf(file, "LEVEL_DATA_SECTION\n");
-    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
-    {
-        const Level *lev = &level[lvl];
-        fprintf(file, "LEVEL_DATA %d\n", lvl);
-        fprintf(file, "level_num %d\n", lev->level_num);
-        fprintf(file, "room_num %d\n", lev->room_num);
-        fprintf(file, "discovered_room_num %d\n", lev->discovered_room_num);
-
-        fprintf(file, "ROOMS\n");
-        for (int r = 0; r < 9; r++)
-        {
-            const Room *rm = &lev->room[r];
-            fprintf(file, "ROOM %d\n", r);
-            fprintf(file, "room_exist %d discovered %d\n", rm->room_exist, rm->discovered);
-            fprintf(file, "corner %d %d\n", rm->corner.y, rm->corner.x);
-            fprintf(file, "middle_door %d %d\n", rm->middle_door.y, rm->middle_door.x);
-            fprintf(file, "door_num %d\n", rm->door_num);
-            for (int d = 0; d < rm->door_num; d++)
-            {
-                fprintf(file, "door %d %d\n", rm->door[d].y, rm->door[d].x);
-            }
-            fprintf(file, "door_positions");
-            for (int d = 0; d < rm->door_num; d++)
-            {
-                fprintf(file, " %d", rm->door_positions[d]);
-            }
-            fprintf(file, "\n");
-            fprintf(file, "room_position %d\n", rm->room_position);
-            fprintf(file, "window_num %d\n", rm->window_num);
-            for (int w = 0; w < 4; w++)
-            {
-                fprintf(file, "window %d %d\n", rm->window[w].y, rm->window[w].x);
-            }
-            fprintf(file, "pillar_num %d\n", rm->pillar_num);
-            for (int p = 0; p < 2; p++)
-            {
-                fprintf(file, "pillar %d %d\n", rm->pillar[p].y, rm->pillar[p].x);
-            }
-            fprintf(file, "length %d width %d\n", rm->length, rm->width);
-            fprintf(file, "type %d\n", rm->type);
-            fprintf(file, "END_ROOM\n");
-        }
-        fprintf(file, "END_ROOMS\n");
-
-        fprintf(file, "between_doors_1\n");
-        for (int i = 0; i < 12; i++)
-        {
-            fprintf(file, "%d %d\n", lev->between_doors_1[i].y, lev->between_doors_1[i].x);
-        }
-        fprintf(file, "between_doors_2\n");
-        for (int i = 0; i < 12; i++)
-        {
-            fprintf(file, "%d %d\n", lev->between_doors_2[i].y, lev->between_doors_2[i].x);
-        }
-        fprintf(file, "corridor_exist");
-        for (int i = 0; i < 12; i++)
-        {
-            fprintf(file, " %d", lev->corridor_exist[i]);
-        }
-        fprintf(file, "\n");
-
-        fprintf(file, "OBJECTS\n");
-        fprintf(file, "object_num %d\n", lev->object_num);
-        for (int o = 0; o < lev->object_num; o++)
-        {
-            Object obj = lev->objects[o];
-            fprintf(file, "object %d %d %d %d %d %d\n",
-                    (int)obj.type, obj.location.y, obj.location.x,
-                    obj.visible, obj.location_room, obj.food_step_count);
-        }
-        fprintf(file, "END_OBJECTS\n");
-
-        fprintf(file, "ENEMIES\n");
-        fprintf(file, "enemy_num %d\n", lev->enemy_num);
-        for (int e = 0; e < lev->enemy_num; e++)
-        {
-            Enemy en = lev->enemies[e];
-            fprintf(file, "enemy %d %d %d %d %d %d %d %d %d %d\n",
-                    en.location.y, en.location.x, en.health, en.damage,
-                    en.speed, en.follow, en.visible, en.location_room,
-                    en.stunned, (int)en.type);
-        }
-        fprintf(file, "END_ENEMIES\n");
-
-        fprintf(file, "END_LEVEL_DATA\n");
-    }
-    fprintf(file, "END_LEVEL_DATA_SECTION\n");
-    fprintf(file, "END_SAVE\n");
-    fclose(file);
-}
-
-void free_map_and_visibility(int lines)
-{
-    if (map)
-    {
-        for (int level = 0; level < MAX_LEVEL; level++)
-        {
-            if (map[level])
-            {
-                for (int i = 0; i < lines; i++)
-                {
-                    free(map[level][i]);
-                }
-                free(map[level]);
-            }
-        }
-        free(map);
-        map = NULL;
-    }
-    if (visibility_grid)
-    {
-        for (int level = 0; level < MAX_LEVEL; level++)
-        {
-            if (visibility_grid[level])
-            {
-                for (int i = 0; i < lines; i++)
-                {
-                    free(visibility_grid[level][i]);
-                }
-                free(visibility_grid[level]);
-            }
-        }
-        free(visibility_grid);
-        visibility_grid = NULL;
-    }
-}
-
-void allocate_map_and_visibility(int lines, int cols)
-{
-    map = (short int ***)malloc(MAX_LEVEL * sizeof(short int **));
-    for (int level = 0; level < MAX_LEVEL; level++)
-    {
-        map[level] = (short int **)malloc(lines * sizeof(short int *));
-        for (int i = 0; i < lines; i++)
-        {
-            map[level][i] = (short int *)malloc(cols * sizeof(short int));
-        }
-    }
-
-    visibility_grid = (bool ***)malloc(MAX_LEVEL * sizeof(bool **));
-    for (int level = 0; level < MAX_LEVEL; level++)
-    {
-        visibility_grid[level] = (bool **)malloc(lines * sizeof(bool *));
-        for (int i = 0; i < lines; i++)
-        {
-            visibility_grid[level][i] = (bool *)malloc(cols * sizeof(bool));
-        }
-    }
-}
-
-void free_level(Level *lvl)
-{
-    if (lvl->objects)
-    {
-        free(lvl->objects);
-        lvl->objects = NULL;
-    }
-    if (lvl->enemies)
-    {
-        free(lvl->enemies);
-        lvl->enemies = NULL;
-    }
-}
-
-void load_full_game_state(const char *filename)
-{
-    FILE *file = fopen(filename, "r");
-    if (!file)
-    {
-        perror("load_full_game_state: Failed to open file");
-        return;
-    }
-
-    int lines, cols;
-    if (fscanf(file, "LINES %d COLS %d\n", &lines, &cols) != 2)
-    {
-        fprintf(stderr, "Invalid file format: Missing dimensions\n");
-        fclose(file);
-        return;
-    }
-
-    free_map_and_visibility(lines);
-    allocate_map_and_visibility(lines, cols);
-
-    int current_level;
-    if (fscanf(file, "CURRENT_LEVEL %d\n", &current_level) != 1)
-    {
-        fprintf(stderr, "Invalid file format: Missing current level\n");
-        fclose(file);
-        return;
-    }
-
-    char buffer[256];
-    fgets(buffer, sizeof(buffer), file);
-    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
-    {
-        int check_level;
-        fscanf(file, "LEVEL_MAP %d\n", &check_level);
-        if (check_level != lvl)
-        {
-            fprintf(stderr, "Map level mismatch: expected %d got %d\n", lvl, check_level);
-            fclose(file);
-            return;
-        }
-
-        for (int i = 0; i < lines; i++)
-        {
-            for (int j = 0; j < cols; j++)
-            {
-                fscanf(file, "%hd", &map[lvl][i][j]);
-            }
-            fscanf(file, "\n");
-        }
-    }
-    fgets(buffer, sizeof(buffer), file);
-
-    fgets(buffer, sizeof(buffer), file);
-    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
-    {
-        int check_level;
-        fscanf(file, "LEVEL_VISIBILITY %d\n", &check_level);
-        if (check_level != lvl)
-        {
-            fprintf(stderr, "Visibility level mismatch: expected %d got %d\n", lvl, check_level);
-            fclose(file);
-            return;
-        }
-
-        for (int i = 0; i < lines; i++)
-        {
-            for (int j = 0; j < cols; j++)
-            {
-                int val;
-                fscanf(file, "%d", &val);
-                visibility_grid[lvl][i][j] = val ? true : false;
-            }
-            fscanf(file, "\n");
-        }
-    }
-    fgets(buffer, sizeof(buffer), file);
-
-    fgets(buffer, sizeof(buffer), file);
-    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
-    {
-        Level *lev = &level[lvl];
-        free_level(lev);
-
-        int check_level;
-        fscanf(file, "LEVEL_DATA %d\n", &check_level);
-        if (check_level != lvl)
-        {
-            fprintf(stderr, "Level data mismatch: expected %d got %d\n", lvl, check_level);
-            fclose(file);
-            return;
-        }
-
-        fscanf(file, "level_num %d\n", &lev->level_num);
-        fscanf(file, "room_num %d\n", &lev->room_num);
-        fscanf(file, "discovered_room_num %d\n", &lev->discovered_room_num);
-
-        fgets(buffer, sizeof(buffer), file);
-        for (int r = 0; r < 9; r++)
-        {
-            Room *room = &lev->room[r];
-            int room_num;
-            fscanf(file, "ROOM %d\n", &room_num);
-
-            fscanf(file, "room_exist %d discovered %d\n", &room->room_exist, &room->discovered);
-            fscanf(file, "corner %d %d\n", &room->corner.y, &room->corner.x);
-            fscanf(file, "middle_door %d %d\n", &room->middle_door.y, &room->middle_door.x);
-            fscanf(file, "door_num %d\n", &room->door_num);
-
-            room->door = malloc(room->door_num * sizeof(Point));
-            room->door_positions = malloc(room->door_num * sizeof(int));
-
-            for (int d = 0; d < room->door_num; d++)
-            {
-                fscanf(file, "door %d %d\n", &room->door[d].y, &room->door[d].x);
-            }
-
-            fscanf(file, "door_positions");
-            for (int d = 0; d < room->door_num; d++)
-            {
-                fscanf(file, " %d", &room->door_positions[d]);
-            }
-            fscanf(file, "\n");
-
-            fscanf(file, "room_position %d\n", &room->room_position);
-            fscanf(file, "window_num %d\n", &room->window_num);
-            for (int w = 0; w < 4; w++)
-            {
-                fscanf(file, "window %d %d\n", &room->window[w].y, &room->window[w].x);
-            }
-            fscanf(file, "pillar_num %d\n", &room->pillar_num);
-            for (int p = 0; p < 2; p++)
-            {
-                fscanf(file, "pillar %d %d\n", &room->pillar[p].y, &room->pillar[p].x);
-            }
-            fscanf(file, "length %d width %d\n", &room->length, &room->width);
-            fscanf(file, "type %d\n", (int *)&room->type);
-            fgets(buffer, sizeof(buffer), file);
-        }
-        fgets(buffer, sizeof(buffer), file);
-
-        fgets(buffer, sizeof(buffer), file);
-        for (int i = 0; i < 12; i++)
-        {
-            fscanf(file, "%d %d\n", &lev->between_doors_1[i].y, &lev->between_doors_1[i].x);
-        }
-
-        fgets(buffer, sizeof(buffer), file);
-        for (int i = 0; i < 12; i++)
-        {
-            fscanf(file, "%d %d\n", &lev->between_doors_2[i].y, &lev->between_doors_2[i].x);
-        }
-
-        fscanf(file, "corridor_exist");
-        for (int i = 0; i < 12; i++)
-        {
-            fscanf(file, " %d", &lev->corridor_exist[i]);
-        }
-        fscanf(file, "\n");
-
-        fgets(buffer, sizeof(buffer), file);
-        fscanf(file, "object_num %d\n", &lev->object_num);
-        lev->objects = malloc(lev->object_num * sizeof(Object));
-        for (int o = 0; o < lev->object_num; o++)
-        {
-            Object *obj = &lev->objects[o];
-            int type;
-            fscanf(file, "object %d %d %d %d %d %d\n",
-                   &type, &obj->location.y, &obj->location.x,
-                   &obj->visible, &obj->location_room, &obj->food_step_count);
-            obj->type = (ObjectType)type;
-        }
-        fgets(buffer, sizeof(buffer), file);
-
-        fgets(buffer, sizeof(buffer), file);
-        fscanf(file, "enemy_num %d\n", &lev->enemy_num);
-        lev->enemies = malloc(lev->enemy_num * sizeof(Enemy));
-        for (int e = 0; e < lev->enemy_num; e++)
-        {
-            Enemy *en = &lev->enemies[e];
-            int type;
-            fscanf(file, "enemy %d %d %d %d %d %d %d %d %d %d\n",
-                   &en->location.y, &en->location.x, &en->health, &en->damage,
-                   &en->speed, &en->follow, &en->visible, &en->location_room,
-                   &en->stunned, &type);
-            en->type = (EnemyType)type;
-        }
-        fgets(buffer, sizeof(buffer), file);
-        fgets(buffer, sizeof(buffer), file);
-    }
-
-    fgets(buffer, sizeof(buffer), file);
-    fgets(buffer, sizeof(buffer), file);
-
-    fclose(file);
-}
-
 int main()
 {
-    strcmp(current_user.username, "temp_user");
-    current_user.play_music = 1;
-    current_user.playlist = 0;
-    current_user.color_option = 1;
-    current_user.difficulty = 10;
-    current_user.total_score = 0;
-    current_user.total_gold = 0;
-    current_user.win_num = 0;
-    current_user.current_game = 0;
-
-    global_playlist = current_user.playlist;
-
     setlocale(LC_ALL, "");
     srand(time(NULL));
 
@@ -577,6 +80,8 @@ int main()
 
     Mix_HookMusicFinished(music_finished_callback);
 
+    current_user.play_music = 1;
+    global_playlist = 0;
     play_playlist(global_playlist);
 
     title_screen();
@@ -603,7 +108,8 @@ int main()
 
                 if (user_option_choice == 0) // New Game
                 {
-                    hero.health = 100, hero.coins = 0, hero.speed = 80, hero.satiety = 100, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
+                    hero.health = 100, hero.coins = 0, hero.speed = 0, hero.satiety = 100, hero.health_progress = 0,
+                    hero.satiety_progress = 0, hero.last_room = -1, hero.damage = 0, hero.speed_progress = 0, hero.damage_progress = 0;
 
                     hero.food_inventory = (Object *)malloc(MAX_FOOD * sizeof(Object));
                     hero.food_num = 0;
@@ -665,7 +171,8 @@ int main()
                 {
                     if (current_user.current_game == 1)
                     {
-                        hero.health = 100, hero.coins = 0, hero.speed = 80, hero.satiety = 100, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
+                        hero.health = 100, hero.coins = 0, hero.speed = 0, hero.satiety = 100, hero.health_progress = 0,
+                        hero.satiety_progress = 0, hero.last_room = -1, hero.damage = 0, hero.speed_progress = 0, hero.damage_progress = 0;
 
                         hero.food_inventory = (Object *)malloc(MAX_FOOD * sizeof(Object));
                         hero.food_num = 0;
@@ -733,14 +240,15 @@ int main()
 
                 if (user_option_choice == 3) // My Profile
                 {
+                    draw_profile_menu();
                 }
 
                 if (user_option_choice == 4) // Settings
                 {
                     user_settings_menu();
-                    global_playlist = current_user.playlist;
-                    play_playlist(global_playlist);
                     save_user_to_csv("users.csv", &current_user);
+                    // global_playlist = current_user.playlist;
+                    // play_playlist(global_playlist);
                 }
             }
         }
@@ -752,7 +260,18 @@ int main()
 
         else if (choice == 2) // Play as Guest
         {
-            hero.health = 100, hero.coins = 0, hero.speed = 80, hero.satiety = 100, hero.health_progress = 0, hero.satiety_progress = 0, hero.last_room = -1;
+            strcpy(current_user.username, "temp_user");
+            current_user.play_music = 1;
+            current_user.playlist = 0;
+            current_user.color_option = 1;
+            current_user.difficulty = 5;
+            current_user.total_score = 0;
+            current_user.total_gold = 0;
+            current_user.win_num = 0;
+            current_user.current_game = 0;
+
+            hero.health = 100, hero.coins = 0, hero.speed = 0, hero.satiety = 100, hero.health_progress = 0,
+            hero.satiety_progress = 0, hero.last_room = -1, hero.damage = 0, hero.speed_progress = 0, hero.damage_progress = 0;
 
             hero.food_inventory = (Object *)malloc(MAX_FOOD * sizeof(Object));
             hero.food_num = 0;
@@ -1631,31 +1150,31 @@ void create_treasure_room_objects()
         case (deamon):
             level[level_num].enemies[i].health = 5;
             level[level_num].enemies[i].damage = 3;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 0;
             break;
         case (fire_monster):
             level[level_num].enemies[i].health = 10;
             level[level_num].enemies[i].damage = 7;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 0;
             break;
         case (giant):
             level[level_num].enemies[i].health = 15;
             level[level_num].enemies[i].damage = 10;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 1;
             break;
         case (snake):
             level[level_num].enemies[i].health = 20;
             level[level_num].enemies[i].damage = 15;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 1;
             break;
         case (undead):
             level[level_num].enemies[i].health = 30;
             level[level_num].enemies[i].damage = 20;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 1;
             break;
         }
@@ -3014,6 +2533,8 @@ void print_info(int level_num)
     }
     mvprintw(3, 60 + (COLS / 7), "Satiety: %d %%", hero.satiety);
     mvprintw(3, 65 + (2 * (COLS / 7)), "Stars: %d", hero.coins);
+    mvprintw(3, 65 + (3 * (COLS / 7)), "Speed: %s", hero.speed ? "Fast" : "Normal");
+    mvprintw(3, 65 + (4 * (COLS / 7)), "Speed: %s", hero.damage ? "Destructive" : "Normal");
 }
 
 void draw_message_border()
@@ -3262,9 +2783,6 @@ void show_food_inventory(int level_num)
 
 void remove_food_from_inventory(int food_index)
 {
-    int y = hero.food_inventory[food_index].location.y;
-    int x = hero.food_inventory[food_index].location.x;
-
     for (int i = food_index; i < hero.food_num - 1; i++)
     {
         hero.food_inventory[i] = hero.food_inventory[i + 1];
@@ -3291,24 +2809,23 @@ void show_weapon_inventory()
             switch (hero.weapon_inventory[i].type)
             {
             case Mace:
-                counts[0]++;
+                counts[0] += 1;
                 break;
             case Dagger:
-                counts[1]++;
+                counts[1] += 10;
                 break;
             case MagicWand:
-                counts[2]++;
+                counts[2] += 8;
                 break;
             case NormalArrow:
-                counts[3]++;
+                counts[3] += 20;
                 break;
             case Sword:
-                counts[4]++;
+                counts[4] += 1;
                 break;
             }
         }
 
-        // Display inventory
         mvprintw(LINES - 5, 5, "Weapon Inventory [Equipped: %s] (Press '2' to close)",
                  weapon_name(hero.current_weapon.type));
 
@@ -3362,9 +2879,6 @@ void show_weapon_inventory()
 
 void remove_weapon_from_inventory(int weapon_index)
 {
-    int y = hero.weapon_inventory[weapon_index].location.y;
-    int x = hero.weapon_inventory[weapon_index].location.x;
-
     for (int i = weapon_index; i < hero.weapon_num - 1; i++)
     {
         hero.weapon_inventory[i] = hero.weapon_inventory[i + 1];
@@ -3504,6 +3018,66 @@ void show_spell_inventory(int level_num)
 
         else if (temp == KEY_LEFT)
             choice = (choice + 2) % 3;
+
+        else if (temp == 10 || temp == 32)
+        {
+            if (choice == 0)
+            {
+                if (health > 0)
+                {
+                    int health_index;
+                    for (int i = 0; i < hero.spell_num; i++)
+                    {
+                        if (hero.spell_inventory[i].type == HealthSpell)
+                        {
+                            health_index = i;
+                            break;
+                        }
+                    }
+
+                    hero.health = 1;
+                    remove_spell_from_inventory(health_index);
+                }
+            }
+
+            if (choice == 1)
+            {
+                if (speed > 0)
+                {
+                    int speed_index;
+                    for (int i = 0; i < hero.spell_num; i++)
+                    {
+                        if (hero.spell_inventory[i].type == SpeedSpell)
+                        {
+                            speed_index = i;
+                            break;
+                        }
+                    }
+
+                    hero.speed = 1;
+                    remove_spell_from_inventory(speed_index);
+                }
+            }
+
+            if (choice == 2)
+            {
+                if (damage > 0)
+                {
+                    int damage_index;
+                    for (int i = 0; i < hero.spell_num; i++)
+                    {
+                        if (hero.spell_inventory[i].type == DamageSpell)
+                        {
+                            damage_index = i;
+                            break;
+                        }
+                    }
+
+                    hero.damage = 1;
+                    remove_spell_from_inventory(damage_index);
+                }
+            }
+        }
     }
 
     for (int i = 0; i < 5; i++)
@@ -3515,9 +3089,6 @@ void show_spell_inventory(int level_num)
 
 void remove_spell_from_inventory(int spell_index)
 {
-    int y = hero.spell_inventory[spell_index].location.y;
-    int x = hero.spell_inventory[spell_index].location.x;
-
     for (int i = spell_index; i < hero.spell_num - 1; i++)
     {
         hero.spell_inventory[i] = hero.spell_inventory[i + 1];
@@ -3681,8 +3252,6 @@ void print_entire_map(int level_num)
         if (temp == 'm' || temp == 'M')
             break;
     }
-
-    // print_objects(level_num);
 }
 
 void print_entire_room(int level_num, int room_num)
@@ -4299,12 +3868,12 @@ void draw_welcome_screen_border()
 {
     erase();
     draw_border();
-    mvprintw((LINES / 2) - 5, (COLS / 2) - 18, "__ Welcome _________________________");
-    mvprintw((LINES / 2) + 5, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+    mvprintw((LINES / 2) - 8, (COLS / 2) - 18, "__ Welcome _________________________");
+    mvprintw((LINES / 2) + 2, (COLS / 2) - 18, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
     for (int i = 0; i < 9; i++)
     {
-        mvprintw((LINES / 2) - 4 + i, (COLS / 2) - 18, "|");
-        mvprintw((LINES / 2) - 4 + i, (COLS / 2) + 17, "|");
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) - 18, "|");
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) + 17, "|");
     }
 }
 
@@ -4319,7 +3888,7 @@ int welcome_screen()
         {
             if (i == choice)
                 attron(A_REVERSE);
-            mvprintw((LINES / 2) - 3 + (2 * i), (COLS / 2) - 9, "%s", welcome_options[i]);
+            mvprintw((LINES / 2) - 6 + (2 * i), (COLS / 2) - 9, "%s", welcome_options[i]);
             if (i == choice)
                 attroff(A_REVERSE);
         }
@@ -4476,7 +4045,7 @@ void new_account_screen()
             strcpy(temp->username, username);
             strcpy(temp->email, email);
             strcpy(temp->password, password);
-            temp->difficulty = 20;
+            temp->difficulty = 10;
             temp->color_option = 1;
             temp->game_num = 0;
             temp->win_num = 0;
@@ -4754,10 +4323,10 @@ int username_found(const char *username)
     {
         if (strcmp(game.users[i]->username, username) == 0)
         {
-            return i; // Return the index of the user
+            return i;
         }
     }
-    return -1; // User not found
+    return -1;
 }
 
 // Function to find a user by email
@@ -4767,10 +4336,10 @@ int email_found(const char *email)
     {
         if (strcmp(game.users[i]->email, email) == 0)
         {
-            return i; // Return the index of the user
+            return i;
         }
     }
-    return -1; // Email not found
+    return -1;
 }
 
 // Function to check if the password is correct
@@ -4778,7 +4347,7 @@ bool password_correct(int user_index, const char *password)
 {
     if (user_index < 0 || user_index >= game.users_num)
     {
-        return false; // Invalid index
+        return false;
     }
     return strcmp(game.users[user_index]->password, password) == 0;
 }
@@ -5141,7 +4710,7 @@ void user_settings_menu()
             choice = (choice + 4) % 5;
         else if (choice == 0 && key == KEY_LEFT)
         {
-            if (current_user.difficulty > 0)
+            if (current_user.difficulty > 1)
                 current_user.difficulty -= 1;
         }
         else if (choice == 0 && key == KEY_RIGHT)
@@ -5158,7 +4727,7 @@ void user_settings_menu()
             current_user.color_option = (current_user.color_option + 9) % 10;
         }
         else if (choice == 2 && (key == KEY_RIGHT || key == KEY_LEFT))
-            current_user.play_music = !current_user.play_music;
+            current_user.play_music = (current_user.play_music + 1) % 2;
         else if (choice == 3 && key == KEY_RIGHT)
             current_user.playlist = (current_user.playlist + 1) % 3;
         else if (choice == 3 && key == KEY_LEFT)
@@ -5679,7 +5248,7 @@ int run_game_level(int i)
 
         hero.satiety_progress += 1;
 
-        if (hero.satiety_progress == 80)
+        if (hero.satiety_progress == (2000 / current_user.difficulty))
         {
             if (hero.satiety >= 5)
                 hero.satiety -= 5;
@@ -6066,31 +5635,31 @@ void create_enemies(int level_num)
         case (deamon):
             level[level_num].enemies[i].health = 5;
             level[level_num].enemies[i].damage = 3;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 0;
             break;
         case (fire_monster):
             level[level_num].enemies[i].health = 10;
             level[level_num].enemies[i].damage = 7;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 0;
             break;
         case (giant):
             level[level_num].enemies[i].health = 15;
             level[level_num].enemies[i].damage = 10;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 1;
             break;
         case (snake):
             level[level_num].enemies[i].health = 20;
             level[level_num].enemies[i].damage = 15;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 1;
             break;
         case (undead):
             level[level_num].enemies[i].health = 30;
             level[level_num].enemies[i].damage = 20;
-            level[level_num].enemies[i].speed = 1;
+            level[level_num].enemies[i].stunned = 0;
             level[level_num].enemies[i].follow = 1;
             break;
         }
@@ -6155,7 +5724,7 @@ void handle_enemies_movement(int level_num)
             switch (level[level_num].enemies[i].type)
             {
             case (fire_monster):
-                if (level[level_num].enemies[i].speed == 1 && in_range(hero.location, level[level_num].enemies[i].location, 3))
+                if (level[level_num].enemies[i].stunned == 0 && in_range(hero.location, level[level_num].enemies[i].location, 2))
                 {
                     int y = rand() % 2;
                     if (y == 1)
@@ -6213,7 +5782,7 @@ void handle_enemies_movement(int level_num)
                 }
                 break;
             case (giant):
-                if (level[level_num].enemies[i].speed == 1 && in_range(hero.location, level[level_num].enemies[i].location, 3))
+                if (level[level_num].enemies[i].stunned == 0 && in_range(hero.location, level[level_num].enemies[i].location, 3))
                 {
                     if (moved == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
                     {
@@ -6265,8 +5834,8 @@ void handle_enemies_movement(int level_num)
                     }
                 }
                 break;
-            case (snake):
-                if (moved == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
+            case (undead):
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
                 {
                     Point destination;
                     destination.y = level[level_num].enemies[i].location.y + 1;
@@ -6278,7 +5847,7 @@ void handle_enemies_movement(int level_num)
                     }
                 }
 
-                if (moved == 0 && level[level_num].enemies[i].location.y - 1 > hero.location.y)
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.y - 1 > hero.location.y)
                 {
                     Point destination;
                     destination.y = level[level_num].enemies[i].location.y - 1;
@@ -6291,7 +5860,7 @@ void handle_enemies_movement(int level_num)
                 }
 
                 moved = 0;
-                if (moved == 0 && level[level_num].enemies[i].location.x + 2 < hero.location.x)
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.x + 2 < hero.location.x)
                 {
                     Point destination;
                     destination.y = level[level_num].enemies[i].location.y;
@@ -6303,7 +5872,7 @@ void handle_enemies_movement(int level_num)
                     }
                 }
 
-                if (moved == 0 && level[level_num].enemies[i].location.x - 2 > hero.location.x)
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.x - 2 > hero.location.x)
                 {
                     Point destination;
                     destination.y = level[level_num].enemies[i].location.y;
@@ -6315,111 +5884,106 @@ void handle_enemies_movement(int level_num)
                     }
                 }
                 break;
-            case (undead):
-                if (level[level_num].enemies[i].speed == 1)
+            case (snake):
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.y + 2 < hero.location.y)
                 {
-                    if (moved == 0 && level[level_num].enemies[i].location.y + 2 < hero.location.y)
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y + 2;
+                    destination.x = level[level_num].enemies[i].location.x;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
                     {
-                        Point destination;
-                        destination.y = level[level_num].enemies[i].location.y + 2;
-                        destination.x = level[level_num].enemies[i].location.x;
-                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
-                        {
-                            level[level_num].enemies[i].location.y += 2;
-                            moved = 1;
-                        }
-                    }
-
-                    if (moved == 0 && level[level_num].enemies[i].location.y - 2 > hero.location.y)
-                    {
-                        Point destination;
-                        destination.y = level[level_num].enemies[i].location.y - 2;
-                        destination.x = level[level_num].enemies[i].location.x;
-                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
-                        {
-                            level[level_num].enemies[i].location.y -= 2;
-                            moved = 1;
-                        }
-                    }
-
-                    if (moved == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
-                    {
-                        Point destination;
-                        destination.y = level[level_num].enemies[i].location.y + 1;
-                        destination.x = level[level_num].enemies[i].location.x;
-                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
-                        {
-                            level[level_num].enemies[i].location.y += 1;
-                            moved = 1;
-                        }
-                    }
-
-                    if (moved == 0 && level[level_num].enemies[i].location.y - 1 > hero.location.y)
-                    {
-                        Point destination;
-                        destination.y = level[level_num].enemies[i].location.y - 1;
-                        destination.x = level[level_num].enemies[i].location.x;
-                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
-                        {
-                            level[level_num].enemies[i].location.y -= 1;
-                            moved = 1;
-                        }
-                    }
-
-                    moved = 0;
-                    if (moved == 0 && level[level_num].enemies[i].location.x + 3 < hero.location.x)
-                    {
-                        Point destination;
-                        destination.y = level[level_num].enemies[i].location.y;
-                        destination.x = level[level_num].enemies[i].location.x + 1;
-                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
-                        {
-                            level[level_num].enemies[i].location.x += 2;
-                            moved = 1;
-                        }
-                    }
-
-                    if (moved == 0 && level[level_num].enemies[i].location.x - 3 > hero.location.x)
-                    {
-                        Point destination;
-                        destination.y = level[level_num].enemies[i].location.y;
-                        destination.x = level[level_num].enemies[i].location.x - 2;
-                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
-                        {
-                            level[level_num].enemies[i].location.x -= 2;
-                            moved = 1;
-                        }
-                    }
-
-                    if (moved == 0 && level[level_num].enemies[i].location.x + 2 < hero.location.x)
-                    {
-                        Point destination;
-                        destination.y = level[level_num].enemies[i].location.y;
-                        destination.x = level[level_num].enemies[i].location.x + 1;
-                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
-                        {
-                            level[level_num].enemies[i].location.x += 1;
-                            moved = 1;
-                        }
-                    }
-
-                    if (moved == 0 && level[level_num].enemies[i].location.x - 2 > hero.location.x)
-                    {
-                        Point destination;
-                        destination.y = level[level_num].enemies[i].location.y;
-                        destination.x = level[level_num].enemies[i].location.x - 1;
-                        if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
-                        {
-                            level[level_num].enemies[i].location.x -= 1;
-                            moved = 1;
-                        }
+                        level[level_num].enemies[i].location.y += 2;
+                        moved = 1;
                     }
                 }
-                break;
-            }
-        }
 
-        level[level_num].enemies[i].speed = !level[level_num].enemies[i].speed;
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.y - 2 > hero.location.y)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y - 2;
+                    destination.x = level[level_num].enemies[i].location.x;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.y -= 2;
+                        moved = 1;
+                    }
+                }
+
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.y + 1 < hero.location.y)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y + 1;
+                    destination.x = level[level_num].enemies[i].location.x;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.y += 1;
+                        moved = 1;
+                    }
+                }
+
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.y - 1 > hero.location.y)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y - 1;
+                    destination.x = level[level_num].enemies[i].location.x;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.y -= 1;
+                        moved = 1;
+                    }
+                }
+
+                moved = 0;
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.x + 3 < hero.location.x)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y;
+                    destination.x = level[level_num].enemies[i].location.x + 1;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.x += 2;
+                        moved = 1;
+                    }
+                }
+
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.x - 3 > hero.location.x)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y;
+                    destination.x = level[level_num].enemies[i].location.x - 2;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.x -= 2;
+                        moved = 1;
+                    }
+                }
+
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.x + 2 < hero.location.x)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y;
+                    destination.x = level[level_num].enemies[i].location.x + 1;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.x += 1;
+                        moved = 1;
+                    }
+                }
+
+                if (moved == 0 && level[level_num].enemies[i].stunned == 0 && level[level_num].enemies[i].location.x - 2 > hero.location.x)
+                {
+                    Point destination;
+                    destination.y = level[level_num].enemies[i].location.y;
+                    destination.x = level[level_num].enemies[i].location.x - 1;
+                    if (valid_point_enemy(level_num, destination) && find_room(level_num, destination) == level[level_num].enemies[i].location_room)
+                    {
+                        level[level_num].enemies[i].location.x -= 1;
+                        moved = 1;
+                    }
+                }
+            }
+            break;
+        }
     }
 }
 
@@ -6623,23 +6187,23 @@ int attack_with_mace(int level_num)
         for (int dx = -2; dx <= 2; dx++)
         {
             if (dx == 0 && dy == 0)
-                continue; // Skip the hero's position
+                continue;
+
             Point target = {hero.location.y + dy, hero.location.x + dx};
+
             for (int i = 0; i < level[level_num].enemy_num; i++)
             {
                 Enemy *e = &level[level_num].enemies[i];
                 if (e->location.y == target.y && e->location.x == target.x && e->health > 0)
                 {
-                    e->health -= damage;
+                    e->health -= (hero.damage + 1) * damage;
 
-                    // Print damage message
                     char msg[100];
-                    snprintf(msg, sizeof(msg), "Hit %s with mace! (-%d HP)", enemy_type_name(e->type), damage);
+                    snprintf(msg, sizeof(msg), "Hit %s with mace! (-%d HP)", enemy_type_name(e->type), (hero.damage + 1) * damage);
                     print_message(msg, "");
                     result = getch();
                     got_input = 1;
 
-                    // Print death message if enemy dies
                     if (e->health <= 0)
                     {
                         char death_msg[100];
@@ -6648,6 +6212,7 @@ int attack_with_mace(int level_num)
                         remove_enemy(level_num, i);
                         result = getch();
                         got_input = 1;
+                        break;
                     }
                 }
             }
@@ -6667,39 +6232,36 @@ int attack_with_dagger(int level_num, int direction_y, int direction_x)
 
     int damage = 12;
     Point dagger_pos = hero.location;
-    for (int i = 0; i < 5; i++)
-    { // Dagger range is 5 units
-        dagger_pos.y += direction_y;
-        dagger_pos.x += direction_x;
-        for (int j = 0; j < level[level_num].enemy_num; j++)
-        {
-            Enemy *e = &level[level_num].enemies[j];
-            if (e->location.y == dagger_pos.y && e->location.x == dagger_pos.x && e->health > 0)
-            {
-                e->health -= damage;
 
-                // Print damage message
-                char msg[100];
-                snprintf(msg, sizeof(msg), "Hit %s with dagger! (-%d HP)", enemy_type_name(e->type), damage);
-                print_message(msg, "");
+    dagger_pos.y += direction_y;
+
+    for (int j = 0; j < level[level_num].enemy_num; j++)
+    {
+        Enemy *e = &level[level_num].enemies[j];
+        if (e->location.y == dagger_pos.y && e->location.x == dagger_pos.x && e->health > 0)
+        {
+            e->health -= (hero.damage + 1) * damage;
+
+            char msg[100];
+            snprintf(msg, sizeof(msg), "Hit %s with dagger! (-%d HP)", enemy_type_name(e->type), (hero.damage + 1) * damage);
+            print_message(msg, "");
+            result = getch();
+            got_input = 1;
+
+            if (e->health <= 0)
+            {
+                char death_msg[100];
+                snprintf(death_msg, sizeof(death_msg), "Congrats! %s was defeated!", enemy_type_name(e->type));
+                print_message(death_msg, "");
+                remove_enemy(level_num, j);
                 result = getch();
                 got_input = 1;
-
-                // Print death message if enemy dies
-                if (e->health <= 0)
-                {
-                    char death_msg[100];
-                    snprintf(death_msg, sizeof(death_msg), "Congrats! %s was defeated!", enemy_type_name(e->type));
-                    print_message(death_msg, "");
-                    remove_enemy(level_num, i);
-                    result = getch();
-                    got_input = 1;
-                }
-
-                if (got_input == 0)
-                    result = getch();
-                return result; // Dagger stops after hitting an enemy
+                break;
             }
+
+            if (got_input == 0)
+                result = getch();
+            return result;
         }
     }
 
@@ -6716,40 +6278,38 @@ int attack_with_magic_wand(int level_num, int direction_y, int direction_x)
 
     int damage = 15;
     Point wand_pos = hero.location;
-    for (int i = 0; i < 10; i++)
-    { // Wand range is 10 units
-        wand_pos.y += direction_y;
-        wand_pos.x += direction_x;
-        for (int j = 0; j < level[level_num].enemy_num; j++)
-        {
-            Enemy *e = &level[level_num].enemies[j];
-            if (e->location.y == wand_pos.y && e->location.x == wand_pos.x && e->health > 0)
-            {
-                e->health -= damage;
-                e->stunned = 1; // Stun the enemy
 
-                // Print damage and stun message
-                char msg[100];
-                snprintf(msg, sizeof(msg), "Hit %s with magic wand! (-%d HP, stunned)", enemy_type_name(e->type), damage);
-                print_message(msg, "");
+    wand_pos.y += direction_y;
+    wand_pos.x += direction_x;
+
+    for (int j = 0; j < level[level_num].enemy_num; j++)
+    {
+        Enemy *e = &level[level_num].enemies[j];
+        if (e->location.y == wand_pos.y && e->location.x == wand_pos.x && e->health > 0)
+        {
+            e->health -= (hero.damage + 1) * damage;
+            e->stunned = 1;
+
+            char msg[100];
+            snprintf(msg, sizeof(msg), "Hit %s with magic wand! (-%d HP, stunned)", enemy_type_name(e->type), (hero.damage + 1) * damage);
+            print_message(msg, "");
+            result = getch();
+            got_input = 1;
+
+            if (e->health <= 0)
+            {
+                char death_msg[100];
+                snprintf(death_msg, sizeof(death_msg), "Congrats! %s was defeated!", enemy_type_name(e->type));
+                print_message(death_msg, "");
+                remove_enemy(level_num, j);
                 result = getch();
                 got_input = 1;
-
-                // Print death message if enemy dies
-                if (e->health <= 0)
-                {
-                    char death_msg[100];
-                    snprintf(death_msg, sizeof(death_msg), "Congrats! %s was defeated!", enemy_type_name(e->type));
-                    print_message(death_msg, "");
-                    remove_enemy(level_num, i);
-                    result = getch();
-                    got_input = 1;
-                }
-
-                if (got_input == 0)
-                    result = getch();
-                return result;
+                break;
             }
+
+            if (got_input == 0)
+                result = getch();
+            return result;
         }
     }
 
@@ -6765,39 +6325,47 @@ int attack_with_normal_arrow(int level_num, int direction_y, int direction_x)
     int got_input = 0;
 
     int damage = 5;
-    Point arrow_pos = hero.location;
-    for (int i = 0; i < 5; i++)
-    { // Arrow range is 5 units
-        arrow_pos.y += direction_y;
-        arrow_pos.x += direction_x;
-        for (int j = 0; j < level[level_num].enemy_num; j++)
+
+    for (int i = -3; i < 4; i++)
+    {
+        for (int k = -3; k < 4; k++)
         {
-            Enemy *e = &level[level_num].enemies[j];
-            if (e->location.y == arrow_pos.y && e->location.x == arrow_pos.x && e->health > 0)
+            if (i == 0 && k == 0)
+                continue;
+
+            Point arrow_pos = hero.location;
+
+            arrow_pos.y += i;
+            arrow_pos.x += k;
+
+            for (int j = 0; j < level[level_num].enemy_num; j++)
             {
-                e->health -= damage;
-
-                // Print damage message
-                char msg[100];
-                snprintf(msg, sizeof(msg), "Hit %s with arrow! (-%d HP)", enemy_type_name(e->type), damage);
-                print_message(msg, "");
-                result = getch();
-                got_input = 1;
-
-                // Print death message if enemy dies
-                if (e->health <= 0)
+                Enemy *e = &level[level_num].enemies[j];
+                if (e->location.y == arrow_pos.y && e->location.x == arrow_pos.x && e->health > 0)
                 {
-                    char death_msg[100];
-                    snprintf(death_msg, sizeof(death_msg), "Congrats! %s was defeated!", enemy_type_name(e->type));
-                    print_message(death_msg, "");
-                    remove_enemy(level_num, i);
+                    e->health -= (hero.damage + 1) * damage;
+
+                    char msg[100];
+                    snprintf(msg, sizeof(msg), "Hit %s with arrow! (-%d HP)", enemy_type_name(e->type), (hero.damage + 1) * damage);
+                    print_message(msg, "");
                     result = getch();
                     got_input = 1;
-                }
 
-                if (got_input == 0)
-                    result = getch();
-                return result;
+                    if (e->health <= 0)
+                    {
+                        char death_msg[100];
+                        snprintf(death_msg, sizeof(death_msg), "Congrats! %s was defeated!", enemy_type_name(e->type));
+                        print_message(death_msg, "");
+                        remove_enemy(level_num, i);
+                        result = getch();
+                        got_input = 1;
+                        break;
+                    }
+
+                    if (got_input == 0)
+                        result = getch();
+                    return result;
+                }
             }
         }
     }
@@ -6814,31 +6382,41 @@ int attack_with_gun(int level_num, int direction_y, int direction_x)
     int got_input = 0;
 
     int damage = 10;
-    Point gun_pos = hero.location;
-    for (int i = 0; i < 10; i++)
-    {
-        gun_pos.y += direction_y;
-        gun_pos.x += direction_x;
-        for (int j = 0; j < level[level_num].enemy_num; j++)
-        {
-            Enemy *e = &level[level_num].enemies[j];
-            if (e->location.y == gun_pos.y && e->location.x == gun_pos.x && e->health > 0)
-            {
-                e->health -= damage;
-                char msg[100];
-                snprintf(msg, sizeof(msg), "Shot %s with gun! (-%d HP)", enemy_type_name(e->type), damage);
-                print_message(msg, "");
-                result = getch();
-                got_input = 1;
 
-                if (e->health <= 0)
+    for (int i = -5; i < 6; i++)
+    {
+        for (int k = -5; k < 6; k++)
+        {
+            if (i == 0 && k == 0)
+                continue;
+
+            Point gun_pos = hero.location;
+
+            gun_pos.y += direction_y;
+            gun_pos.x += direction_x;
+
+            for (int j = 0; j < level[level_num].enemy_num; j++)
+            {
+                Enemy *e = &level[level_num].enemies[j];
+                if (e->location.y == gun_pos.y && e->location.x == gun_pos.x && e->health > 0)
                 {
-                    char death_msg[100];
-                    snprintf(death_msg, sizeof(death_msg), "Congrats! %s was eliminated!", enemy_type_name(e->type));
-                    print_message(death_msg, "");
-                    remove_enemy(level_num, i);
+                    e->health -= (hero.damage + 1) * damage;
+                    char msg[100];
+                    snprintf(msg, sizeof(msg), "Shot %s with gun! (-%d HP)", enemy_type_name(e->type), (hero.damage + 1) * damage);
+                    print_message(msg, "");
                     result = getch();
                     got_input = 1;
+
+                    if (e->health <= 0)
+                    {
+                        char death_msg[100];
+                        snprintf(death_msg, sizeof(death_msg), "Congrats! %s was eliminated!", enemy_type_name(e->type));
+                        print_message(death_msg, "");
+                        remove_enemy(level_num, i);
+                        result = getch();
+                        got_input = 1;
+                        break;
+                    }
                 }
             }
         }
@@ -6863,8 +6441,7 @@ void enemies_attack_hero(int level_num)
                 hero.health = 0;
             char death_msg[100];
             snprintf(death_msg, sizeof(death_msg), "Enemy hit you for %d damage!", level[level_num].enemies[i].damage);
-            print_message(death_msg, "Press any key...");
-            getch();
+            print_message(death_msg, "");
         }
     }
 }
@@ -6898,22 +6475,34 @@ void show_death_screen()
 {
     erase();
     draw_border();
-    // for (int i = 0; i < 33; i++)
-    //     mvprintw(LINES - 33 + i, (COLS / 2) - 31, "%s", tombstone[i]);
+    for (int i = 0; i < 33; i++)
+        mvprintw(LINES - 33 + i, (COLS / 2) - 31, "%s", tombstone[i]);
     mvprintw(LINES - 40, ((COLS / 2) - 26), "Sorry, you Lost. I know you can do better next time!");
-    mvprintw(LINES - 38, ((COLS / 2) - 9), "- Press any key -");
-    getch();
+    mvprintw(LINES - 38, ((COLS / 2) - 12), "- Press X to continue -");
+    while (1)
+    {
+        int temp;
+        temp = getch();
+        if (temp == 'x' || temp == 'X')
+            break;
+    }
 }
 
 void show_win_screen()
 {
     erase();
     draw_border();
-    // for (int i = 0; i < 34; i++)
-    //     mvprintw(LINES - 34 + i, (COLS / 2) - 33, "%s", tombstone[i]);
+    for (int i = 0; i < 34; i++)
+        mvprintw(LINES - 29 + i, (COLS / 2) - 33, "%s", tombstone[i]);
     mvprintw(LINES - 40, ((COLS / 2) - 23), "Congrats, you won. You are officially amazing!");
-    mvprintw(LINES - 38, ((COLS / 2) - 9), "- Press any key -");
-    getch();
+    mvprintw(LINES - 38, ((COLS / 2) - 12), "- Press X to continue -");
+    while (1)
+    {
+        int temp;
+        temp = getch();
+        if (temp == 'x' || temp == 'X')
+            break;
+    }
 }
 
 void play_playlist(int playlist_num)
@@ -6937,6 +6526,14 @@ void play_playlist(int playlist_num)
         Mix_PlayMusic(music, 0);
         current_track += 1;
     }
+
+    else
+    {
+        if (Mix_PlayingMusic())
+        {
+            Mix_HaltMusic();
+        }
+    }
 }
 
 void show_no_save_screen()
@@ -6946,4 +6543,521 @@ void show_no_save_screen()
     mvprintw(LINES - 40, ((COLS / 2) - 25), "Sorry, you don't currently have any saved games :(");
     mvprintw(LINES - 38, ((COLS / 2) - 9), "- Press any key -");
     getch();
+}
+
+void draw_profile_menu()
+{
+    erase();
+    draw_border();
+    mvprintw((LINES / 2) - 8, (COLS / 2) - 24, "__ My Profile __________________________________");
+    mvprintw((LINES / 2) - 6, (COLS / 2) - 18, "Username: %s", current_user.username);
+    mvprintw((LINES / 2) - 4, (COLS / 2) - 18, "Email: %s", current_user.email);
+    mvprintw((LINES / 2) - 2, (COLS / 2) - 18, "Avatar: ( %s )", face[current_user.color_option]);
+    mvprintw((LINES / 2), (COLS / 2) - 18, "Total Games: %2d      Games Won: %2d", current_user.game_num, current_user.win_num);
+    mvprintw((LINES / 2) + 2, (COLS / 2) - 18, "Current Saved Game: - %3s -", current_user.current_game ? "Yes" : "No");
+    mvprintw((LINES / 2) + 4, (COLS / 2) - 18, "Play Music   - %3s -", current_user.play_music ? "Yes" : "No");
+    mvprintw((LINES / 2) + 6, (COLS / 2) - 18, "Playlist: %s", playlist_name[current_user.playlist]);
+    attron(A_REVERSE);
+    mvprintw((LINES / 2) + 8, (COLS / 2) - 4, "Go Back");
+    attroff(A_REVERSE);
+    mvprintw((LINES / 2) + 10, (COLS / 2) - 24, "‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾");
+
+    for (int i = 0; i < 17; i++)
+    {
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) - 24, "|");
+        mvprintw((LINES / 2) - 7 + i, (COLS / 2) + 23, "|");
+    }
+
+    while (1)
+    {
+        int temp;
+        temp = getch();
+        if (temp == 10 || temp == 32)
+            break;
+    }
+}
+
+void music_finished_callback(void)
+{
+    play_playlist(global_playlist);
+}
+
+void play_specific_track(const char *track, const char **playlist)
+{
+    if (current_user.play_music == 1)
+    {
+        if (Mix_PlayingMusic())
+        {
+            Mix_HaltMusic();
+        }
+
+        Mix_Music *music = Mix_LoadMUS(track);
+        if (!music)
+        {
+            fprintf(stderr, "Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
+            return;
+        }
+
+        Mix_PlayMusic(music, 0);
+
+        while (Mix_PlayingMusic())
+        {
+            SDL_Delay(100);
+        }
+    }
+}
+
+void jumpscare(const char *scary_music)
+{
+    if (Mix_PlayingMusic())
+    {
+        Mix_HaltMusic();
+    }
+
+    Mix_Music *music = Mix_LoadMUS(scary_music);
+    if (!music)
+    {
+        fprintf(stderr, "Failed to load jump scare music! SDL_mixer Error: %s\n", Mix_GetError());
+        return;
+    }
+    Mix_PlayMusic(music, 0);
+
+    erase();
+    golden_freddy_appear();
+    refresh();
+
+    SDL_Delay(5000);
+
+    erase();
+    refresh();
+
+    play_playlist(global_playlist);
+}
+
+char *generate_save_filename(const char *username, int current_game)
+{
+    if (mkdir("save", 0755) == -1 && errno != EEXIST)
+    {
+        perror("mkdir save");
+        return NULL;
+    }
+
+    char dir_path[256];
+    snprintf(dir_path, sizeof(dir_path), "save/%s", username);
+    if (mkdir(dir_path, 0755) == -1 && errno != EEXIST)
+    {
+        perror("mkdir username directory");
+        return NULL;
+    }
+
+    size_t size = snprintf(NULL, 0, "save/%s/%s_%d.save", username, username, current_game) + 1;
+    char *filename = malloc(size);
+    if (!filename)
+        return NULL;
+
+    snprintf(filename, size, "save/%s/%s_%d.save", username, username, current_game);
+    return filename;
+}
+
+void save_full_game_state(const char *filename, int current_level)
+{
+    FILE *file = fopen(filename, "w");
+    if (!file)
+    {
+        perror("save_full_game_state: Failed to open file");
+        return;
+    }
+
+    fprintf(file, "LINES %d COLS %d\n", LINES, COLS);
+    fprintf(file, "CURRENT_LEVEL %d\n", current_level);
+
+    fprintf(file, "GLOBAL_MAP\n");
+    for (int level = 0; level < MAX_LEVEL; level++)
+    {
+        fprintf(file, "LEVEL_MAP %d\n", level);
+        for (int i = 0; i < LINES; i++)
+        {
+            for (int j = 0; j < COLS; j++)
+            {
+                fprintf(file, "%d ", map[level][i][j]);
+            }
+            fprintf(file, "\n");
+        }
+    }
+    fprintf(file, "END_GLOBAL_MAP\n");
+
+    fprintf(file, "GLOBAL_VISIBILITY\n");
+    for (int level = 0; level < MAX_LEVEL; level++)
+    {
+        fprintf(file, "LEVEL_VISIBILITY %d\n", level);
+        for (int i = 0; i < LINES; i++)
+        {
+            for (int j = 0; j < COLS; j++)
+            {
+                fprintf(file, "%d ", visibility_grid[level][i][j] ? 1 : 0);
+            }
+            fprintf(file, "\n");
+        }
+    }
+    fprintf(file, "END_GLOBAL_VISIBILITY\n");
+
+    fprintf(file, "LEVEL_DATA_SECTION\n");
+    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
+    {
+        const Level *lev = &level[lvl];
+        fprintf(file, "LEVEL_DATA %d\n", lvl);
+        fprintf(file, "level_num %d\n", lev->level_num);
+        fprintf(file, "room_num %d\n", lev->room_num);
+        fprintf(file, "discovered_room_num %d\n", lev->discovered_room_num);
+
+        fprintf(file, "ROOMS\n");
+        for (int r = 0; r < 9; r++)
+        {
+            const Room *rm = &lev->room[r];
+            fprintf(file, "ROOM %d\n", r);
+            fprintf(file, "room_exist %d discovered %d\n", rm->room_exist, rm->discovered);
+            fprintf(file, "corner %d %d\n", rm->corner.y, rm->corner.x);
+            fprintf(file, "middle_door %d %d\n", rm->middle_door.y, rm->middle_door.x);
+            fprintf(file, "door_num %d\n", rm->door_num);
+            for (int d = 0; d < rm->door_num; d++)
+            {
+                fprintf(file, "door %d %d\n", rm->door[d].y, rm->door[d].x);
+            }
+            fprintf(file, "door_positions");
+            for (int d = 0; d < rm->door_num; d++)
+            {
+                fprintf(file, " %d", rm->door_positions[d]);
+            }
+            fprintf(file, "\n");
+            fprintf(file, "room_position %d\n", rm->room_position);
+            fprintf(file, "window_num %d\n", rm->window_num);
+            for (int w = 0; w < 4; w++)
+            {
+                fprintf(file, "window %d %d\n", rm->window[w].y, rm->window[w].x);
+            }
+            fprintf(file, "pillar_num %d\n", rm->pillar_num);
+            for (int p = 0; p < 2; p++)
+            {
+                fprintf(file, "pillar %d %d\n", rm->pillar[p].y, rm->pillar[p].x);
+            }
+            fprintf(file, "length %d width %d\n", rm->length, rm->width);
+            fprintf(file, "type %d\n", rm->type);
+            fprintf(file, "END_ROOM\n");
+        }
+        fprintf(file, "END_ROOMS\n");
+
+        fprintf(file, "between_doors_1\n");
+        for (int i = 0; i < 12; i++)
+        {
+            fprintf(file, "%d %d\n", lev->between_doors_1[i].y, lev->between_doors_1[i].x);
+        }
+        fprintf(file, "between_doors_2\n");
+        for (int i = 0; i < 12; i++)
+        {
+            fprintf(file, "%d %d\n", lev->between_doors_2[i].y, lev->between_doors_2[i].x);
+        }
+        fprintf(file, "corridor_exist");
+        for (int i = 0; i < 12; i++)
+        {
+            fprintf(file, " %d", lev->corridor_exist[i]);
+        }
+        fprintf(file, "\n");
+
+        fprintf(file, "OBJECTS\n");
+        fprintf(file, "object_num %d\n", lev->object_num);
+        for (int o = 0; o < lev->object_num; o++)
+        {
+            Object obj = lev->objects[o];
+            fprintf(file, "object %d %d %d %d %d %d\n",
+                    (int)obj.type, obj.location.y, obj.location.x,
+                    obj.visible, obj.location_room, obj.food_step_count);
+        }
+        fprintf(file, "END_OBJECTS\n");
+
+        fprintf(file, "ENEMIES\n");
+        fprintf(file, "enemy_num %d\n", lev->enemy_num);
+        for (int e = 0; e < lev->enemy_num; e++)
+        {
+            Enemy en = lev->enemies[e];
+            fprintf(file, "enemy %d %d %d %d %d %d %d %d %d %d\n",
+                    en.location.y, en.location.x, en.health, en.damage,
+                    en.speed, en.follow, en.visible, en.location_room,
+                    en.stunned, (int)en.type);
+        }
+        fprintf(file, "END_ENEMIES\n");
+
+        fprintf(file, "END_LEVEL_DATA\n");
+    }
+    fprintf(file, "END_LEVEL_DATA_SECTION\n");
+    fprintf(file, "END_SAVE\n");
+    fclose(file);
+}
+
+void free_map_and_visibility(int lines)
+{
+    if (map)
+    {
+        for (int level = 0; level < MAX_LEVEL; level++)
+        {
+            if (map[level])
+            {
+                for (int i = 0; i < lines; i++)
+                {
+                    free(map[level][i]);
+                }
+                free(map[level]);
+            }
+        }
+        free(map);
+        map = NULL;
+    }
+    if (visibility_grid)
+    {
+        for (int level = 0; level < MAX_LEVEL; level++)
+        {
+            if (visibility_grid[level])
+            {
+                for (int i = 0; i < lines; i++)
+                {
+                    free(visibility_grid[level][i]);
+                }
+                free(visibility_grid[level]);
+            }
+        }
+        free(visibility_grid);
+        visibility_grid = NULL;
+    }
+}
+
+void allocate_map_and_visibility(int lines, int cols)
+{
+    map = (short int ***)malloc(MAX_LEVEL * sizeof(short int **));
+    for (int level = 0; level < MAX_LEVEL; level++)
+    {
+        map[level] = (short int **)malloc(lines * sizeof(short int *));
+        for (int i = 0; i < lines; i++)
+        {
+            map[level][i] = (short int *)malloc(cols * sizeof(short int));
+        }
+    }
+
+    visibility_grid = (bool ***)malloc(MAX_LEVEL * sizeof(bool **));
+    for (int level = 0; level < MAX_LEVEL; level++)
+    {
+        visibility_grid[level] = (bool **)malloc(lines * sizeof(bool *));
+        for (int i = 0; i < lines; i++)
+        {
+            visibility_grid[level][i] = (bool *)malloc(cols * sizeof(bool));
+        }
+    }
+}
+
+void free_level(Level *lvl)
+{
+    if (lvl->objects)
+    {
+        free(lvl->objects);
+        lvl->objects = NULL;
+    }
+    if (lvl->enemies)
+    {
+        free(lvl->enemies);
+        lvl->enemies = NULL;
+    }
+}
+
+void load_full_game_state(const char *filename)
+{
+    FILE *file = fopen(filename, "r");
+    if (!file)
+    {
+        perror("load_full_game_state: Failed to open file");
+        return;
+    }
+
+    int lines, cols;
+    if (fscanf(file, "LINES %d COLS %d\n", &lines, &cols) != 2)
+    {
+        fprintf(stderr, "Invalid file format: Missing dimensions\n");
+        fclose(file);
+        return;
+    }
+
+    free_map_and_visibility(lines);
+    allocate_map_and_visibility(lines, cols);
+
+    int current_level;
+    if (fscanf(file, "CURRENT_LEVEL %d\n", &current_level) != 1)
+    {
+        fprintf(stderr, "Invalid file format: Missing current level\n");
+        fclose(file);
+        return;
+    }
+
+    char buffer[256];
+    fgets(buffer, sizeof(buffer), file);
+    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
+    {
+        int check_level;
+        fscanf(file, "LEVEL_MAP %d\n", &check_level);
+        if (check_level != lvl)
+        {
+            fprintf(stderr, "Map level mismatch: expected %d got %d\n", lvl, check_level);
+            fclose(file);
+            return;
+        }
+
+        for (int i = 0; i < lines; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                fscanf(file, "%hd", &map[lvl][i][j]);
+            }
+            fscanf(file, "\n");
+        }
+    }
+    fgets(buffer, sizeof(buffer), file);
+
+    fgets(buffer, sizeof(buffer), file);
+    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
+    {
+        int check_level;
+        fscanf(file, "LEVEL_VISIBILITY %d\n", &check_level);
+        if (check_level != lvl)
+        {
+            fprintf(stderr, "Visibility level mismatch: expected %d got %d\n", lvl, check_level);
+            fclose(file);
+            return;
+        }
+
+        for (int i = 0; i < lines; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                int val;
+                fscanf(file, "%d", &val);
+                visibility_grid[lvl][i][j] = val ? true : false;
+            }
+            fscanf(file, "\n");
+        }
+    }
+    fgets(buffer, sizeof(buffer), file);
+
+    fgets(buffer, sizeof(buffer), file);
+    for (int lvl = 0; lvl < MAX_LEVEL; lvl++)
+    {
+        Level *lev = &level[lvl];
+        free_level(lev);
+
+        int check_level;
+        fscanf(file, "LEVEL_DATA %d\n", &check_level);
+        if (check_level != lvl)
+        {
+            fprintf(stderr, "Level data mismatch: expected %d got %d\n", lvl, check_level);
+            fclose(file);
+            return;
+        }
+
+        fscanf(file, "level_num %d\n", &lev->level_num);
+        fscanf(file, "room_num %d\n", &lev->room_num);
+        fscanf(file, "discovered_room_num %d\n", &lev->discovered_room_num);
+
+        fgets(buffer, sizeof(buffer), file);
+        for (int r = 0; r < 9; r++)
+        {
+            Room *room = &lev->room[r];
+            int room_num;
+            fscanf(file, "ROOM %d\n", &room_num);
+
+            fscanf(file, "room_exist %d discovered %d\n", &room->room_exist, &room->discovered);
+            fscanf(file, "corner %d %d\n", &room->corner.y, &room->corner.x);
+            fscanf(file, "middle_door %d %d\n", &room->middle_door.y, &room->middle_door.x);
+            fscanf(file, "door_num %d\n", &room->door_num);
+
+            room->door = malloc(room->door_num * sizeof(Point));
+            room->door_positions = malloc(room->door_num * sizeof(int));
+
+            for (int d = 0; d < room->door_num; d++)
+            {
+                fscanf(file, "door %d %d\n", &room->door[d].y, &room->door[d].x);
+            }
+
+            fscanf(file, "door_positions");
+            for (int d = 0; d < room->door_num; d++)
+            {
+                fscanf(file, " %d", &room->door_positions[d]);
+            }
+            fscanf(file, "\n");
+
+            fscanf(file, "room_position %d\n", &room->room_position);
+            fscanf(file, "window_num %d\n", &room->window_num);
+            for (int w = 0; w < 4; w++)
+            {
+                fscanf(file, "window %d %d\n", &room->window[w].y, &room->window[w].x);
+            }
+            fscanf(file, "pillar_num %d\n", &room->pillar_num);
+            for (int p = 0; p < 2; p++)
+            {
+                fscanf(file, "pillar %d %d\n", &room->pillar[p].y, &room->pillar[p].x);
+            }
+            fscanf(file, "length %d width %d\n", &room->length, &room->width);
+            fscanf(file, "type %d\n", (int *)&room->type);
+            fgets(buffer, sizeof(buffer), file);
+        }
+        fgets(buffer, sizeof(buffer), file);
+
+        fgets(buffer, sizeof(buffer), file);
+        for (int i = 0; i < 12; i++)
+        {
+            fscanf(file, "%d %d\n", &lev->between_doors_1[i].y, &lev->between_doors_1[i].x);
+        }
+
+        fgets(buffer, sizeof(buffer), file);
+        for (int i = 0; i < 12; i++)
+        {
+            fscanf(file, "%d %d\n", &lev->between_doors_2[i].y, &lev->between_doors_2[i].x);
+        }
+
+        fscanf(file, "corridor_exist");
+        for (int i = 0; i < 12; i++)
+        {
+            fscanf(file, " %d", &lev->corridor_exist[i]);
+        }
+        fscanf(file, "\n");
+
+        fgets(buffer, sizeof(buffer), file);
+        fscanf(file, "object_num %d\n", &lev->object_num);
+        lev->objects = malloc(lev->object_num * sizeof(Object));
+        for (int o = 0; o < lev->object_num; o++)
+        {
+            Object *obj = &lev->objects[o];
+            int type;
+            fscanf(file, "object %d %d %d %d %d %d\n",
+                   &type, &obj->location.y, &obj->location.x,
+                   &obj->visible, &obj->location_room, &obj->food_step_count);
+            obj->type = (ObjectType)type;
+        }
+        fgets(buffer, sizeof(buffer), file);
+
+        fgets(buffer, sizeof(buffer), file);
+        fscanf(file, "enemy_num %d\n", &lev->enemy_num);
+        lev->enemies = malloc(lev->enemy_num * sizeof(Enemy));
+        for (int e = 0; e < lev->enemy_num; e++)
+        {
+            Enemy *en = &lev->enemies[e];
+            int type;
+            fscanf(file, "enemy %d %d %d %d %d %d %d %d %d %d\n",
+                   &en->location.y, &en->location.x, &en->health, &en->damage,
+                   &en->speed, &en->follow, &en->visible, &en->location_room,
+                   &en->stunned, &type);
+            en->type = (EnemyType)type;
+        }
+        fgets(buffer, sizeof(buffer), file);
+        fgets(buffer, sizeof(buffer), file);
+    }
+
+    fgets(buffer, sizeof(buffer), file);
+    fgets(buffer, sizeof(buffer), file);
+
+    fclose(file);
 }
